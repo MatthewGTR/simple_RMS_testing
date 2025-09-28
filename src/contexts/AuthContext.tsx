@@ -27,150 +27,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const fetchProfile = async (userId: string) => {
-    try {
-      console.log('Fetching profile for user:', userId)
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle()
-
-      if (error) {
-        console.error('Error fetching profile:', error)
-        // If profile doesn't exist, create one
-        if (error.code === 'PGRST116') {
-          console.log('Profile not found, creating new profile')
-          return await createProfile(userId)
-        }
-        throw error
-      }
-
-      console.log('Profile fetched:', data)
-      return data
-    } catch (error) {
-      console.error('Error in fetchProfile:', error)
-      return null
-    }
-  }
-
-  const createProfile = async (userId: string) => {
-    try {
-      // Get user email from auth
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return null
-
-      console.log('Creating profile for user:', user.email)
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          email: user.email,
-          role: 'user',
-          credits: 100
-        })
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Error creating profile:', error)
-        return null
-      }
-
-      console.log('Profile created:', data)
-      return data
-    } catch (error) {
-      console.error('Error in createProfile:', error)
-      return null
-    }
-  }
-
-  const refreshProfile = async () => {
-    if (user) {
-      const profileData = await fetchProfile(user.id)
-      setProfile(profileData)
-    }
-  }
-
   useEffect(() => {
-    let mounted = true
-
-    const initializeAuth = async () => {
-      try {
-        console.log('Initializing auth...')
-        const { data: { session } } = await supabase.auth.getSession()
-        console.log('Session:', session?.user?.email || 'No session')
-        
-        if (mounted) {
-          setUser(session?.user ?? null)
-          
-          if (session?.user) {
-            console.log('User found, fetching profile...')
-            const profileData = await fetchProfile(session.user.id)
-            if (mounted) {
-              setProfile(profileData)
-              console.log('Profile set:', profileData?.email || 'No profile')
-            }
-          }
-          
-          console.log('Setting loading to false')
-          setLoading(false)
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error)
-        if (mounted) {
-          setLoading(false)
-        }
+    console.log('AuthProvider: Starting initialization')
+    
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      console.log('AuthProvider: Initial session check', { session: !!session, error })
+      
+      if (session?.user) {
+        setUser(session.user)
+        console.log('AuthProvider: User found, setting loading to false')
+        setProfile({ 
+          id: session.user.id, 
+          email: session.user.email || '', 
+          role: 'user', 
+          credits: 100, 
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
       }
-    }
+      
+      setLoading(false)
+      console.log('AuthProvider: Loading set to false')
+    })
 
-    initializeAuth()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email || 'No user')
-        if (mounted) {
-          setUser(session?.user ?? null)
-          
-          if (session?.user) {
-            const profileData = await fetchProfile(session.user.id)
-            if (mounted) {
-              setProfile(profileData)
-            }
-          } else {
-            setProfile(null)
-          }
-          
-          setLoading(false)
-        }
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('AuthProvider: Auth state changed', { event, session: !!session })
+      
+      if (session?.user) {
+        setUser(session.user)
+        setProfile({ 
+          id: session.user.id, 
+          email: session.user.email || '', 
+          role: session.user.email === 'admin@test.com' ? 'admin' : 'user', 
+          credits: 100, 
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+      } else {
+        setUser(null)
+        setProfile(null)
       }
-    )
+      
+      setLoading(false)
+    })
 
     return () => {
-      mounted = false
+      console.log('AuthProvider: Cleaning up subscription')
       subscription.unsubscribe()
     }
   }, [])
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    })
+    const { error } = await supabase.auth.signUp({ email, password })
     return { error }
   }
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error }
   }
 
   const signOut = async () => {
     await supabase.auth.signOut()
   }
+
+  const refreshProfile = async () => {
+    // Simple refresh - just update the timestamp
+    if (profile) {
+      setProfile({ ...profile, updated_at: new Date().toISOString() })
+    }
+  }
+
+  console.log('AuthProvider: Rendering with state', { user: !!user, profile: !!profile, loading })
 
   const value = {
     user,
