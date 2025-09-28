@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
     })
-      return null
+    return { error }
   }
 
   const signIn = async (email: string, password: string) => {
@@ -123,6 +123,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
     })
     return { error }
+  }
+
+  const signOut = async () => {
+    await supabase.auth.signOut()
   }
 
   const value = {
