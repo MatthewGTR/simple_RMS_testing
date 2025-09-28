@@ -10,13 +10,14 @@ export function AdminPanel() {
 
   const fetchUsers = async () => {
     try {
+      setLoading(true)
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .select('*')
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setUsers(data)
+      setUsers(data || [])
     } catch (error) {
       console.error('Error fetching users:', error)
       setMessage('Error loading users')
@@ -30,12 +31,24 @@ export function AdminPanel() {
     setMessage('')
 
     try {
-      const { error } = await supabase.rpc('update_user_credits', {
-        user_id: userId,
-        credit_change: creditChange
-      })
+      // Get current user credits
+      const { data: currentUser, error: fetchError } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', userId)
+        .single()
 
-      if (error) throw error
+      if (fetchError) throw fetchError
+
+      const newCredits = Math.max(0, currentUser.credits + creditChange)
+
+      // Update credits
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ credits: newCredits })
+        .eq('id', userId)
+
+      if (updateError) throw updateError
 
       setMessage(`Credits ${creditChange > 0 ? 'added' : 'deducted'} successfully`)
       await fetchUsers()

@@ -28,43 +28,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const fetchProfile = async (userId: string) => {
-    console.log('Fetching profile for user:', userId)
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (error) {
-      console.error('Error fetching profile:', error)
-      return null
-    }
-
-    if (!data) {
-      console.log('Profile not found for user:', userId, 'attempting to create...')
-      // Try to create profile if it doesn't exist
-      const { data: newProfile, error: createError } = await supabase
+    try {
+      const { data, error } = await supabase
         .from('profiles')
-        .insert({
-          id: userId,
-          email: user?.email || '',
-          role: 'user',
-          credits: 0
-        })
-        .select()
-        .single()
-      
-      if (createError) {
-        console.error('Error creating profile:', createError)
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (error) {
+        console.error('Error fetching profile:', error)
         return null
       }
-      
-      console.log('Profile created:', newProfile)
-      return newProfile
-    }
 
-    console.log('Profile found:', data)
-    return data
+      return data
+    } catch (error) {
+      console.error('Error in fetchProfile:', error)
+      return null
+    }
   }
 
   const refreshProfile = async () => {
@@ -75,38 +55,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session?.user?.id)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id).then((profileData) => {
-          console.log('Setting initial profile:', profileData)
-          setProfile(profileData)
-        })
-      }
-      setLoading(false)
-    })
+    let mounted = true
 
-    // Listen for auth changes
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (mounted) {
+          setUser(session?.user ?? null)
+          
+          if (session?.user) {
+            const profileData = await fetchProfile(session.user.id)
+            if (mounted) {
+              setProfile(profileData)
+            }
+          }
+          
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error)
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    initializeAuth()
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.id)
-        setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          const profileData = await fetchProfile(session.user.id)
-          console.log('Setting profile after auth change:', profileData)
-          setProfile(profileData)
-        } else {
-          setProfile(null)
+        if (mounted) {
+          setUser(session?.user ?? null)
+          
+          if (session?.user) {
+            const profileData = await fetchProfile(session.user.id)
+            if (mounted) {
+              setProfile(profileData)
+            }
+          } else {
+            setProfile(null)
+          }
+          
+          setLoading(false)
         }
-        
-        setLoading(false)
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signUp = async (email: string, password: string) => {
