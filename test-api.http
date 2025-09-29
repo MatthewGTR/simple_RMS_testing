@@ -27,8 +27,8 @@ Content-Type: application/json
 
 {
   "action": "update_credits",
-  "user_id": "user-uuid-here",
-  "credit_change": 50,
+  "p_user_id": "user-uuid-here",
+  "p_delta": 50,
   "reason": "API test credit adjustment"
 }
 

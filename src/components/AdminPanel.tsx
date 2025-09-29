@@ -92,8 +92,8 @@ export function AdminPanel() {
         },
         body: JSON.stringify({
           action: 'update_credits',
-          user_id: userId,
-          credit_change: creditChange,
+          p_user_id: userId,
+          p_delta: creditChange,
           reason: `Admin adjustment: ${creditChange > 0 ? 'added' : 'removed'} ${Math.abs(creditChange)} credits`
         }),
       });
@@ -104,7 +104,7 @@ export function AdminPanel() {
       }
 
       const data = await response.json();
-      setMessage(`Credits updated successfully. New balance: ${data.new_credits}`);
+      setMessage(`Credits updated successfully. New balance: ${data.new_credits || 'unknown'}`);
       
       // Refresh the profiles list
       await fetchProfiles();

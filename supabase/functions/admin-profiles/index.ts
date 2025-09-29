@@ -95,17 +95,17 @@ Deno.serve(async (req: Request) => {
       const body: AdminRequest = await req.json();
 
       if (body.action === 'update_credits') {
-        if (!body.user_id || body.credit_change === undefined) {
+        if (!body.p_user_id || body.p_delta === undefined) {
           return new Response(
-            JSON.stringify({ error: 'Missing user_id or credit_change' }),
+            JSON.stringify({ error: 'Missing p_user_id or p_delta' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
         // Update credits using the secure admin function with correct parameter names
         const { data, error } = await supabaseAdmin.rpc('admin_update_credits', {
-          p_user_id: body.user_id,
-          p_delta: body.credit_change,
+          p_user_id: body.p_user_id,
+          p_delta: body.p_delta,
           p_reason: body.reason || `Admin adjustment by ${user.email}`
         });
 
@@ -117,20 +117,20 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        const result = data[0];
-        if (!result.success) {
+        if (!data || data.length === 0) {
           return new Response(
-            JSON.stringify({ error: result?.message || 'Update failed' }),
+            JSON.stringify({ error: 'No data returned from update' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
+        const result = data[0];
         return new Response(
           JSON.stringify({ 
             success: true, 
-            old_credits: result.old_credits,
-            new_credits: result.new_credits,
-            message: result.message
+            user_id: result.id,
+            new_credits: result.credits,
+            message: `Credits updated successfully`
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );

@@ -91,13 +91,35 @@ https://your-project.supabase.co/functions/v1/admin-profiles
 - `GET /admin-profiles` - List all profiles (admin only)
 - `POST /admin-profiles` - Update user credits (admin only)
 
+### Security Hardening
+
+All admin functions are secured with:
+- `SECURITY DEFINER` with `postgres` owner
+- `search_path` set to `public, pg_temp` to prevent injection
+- Execute permissions granted only to `service_role`
+- All public, anon, and authenticated access revoked
+
 ### Database Migrations
 Run the migration to set up the complete schema:
 ```sql
--- Run supabase/migrations/complete_profiles_setup.sql
+-- Run supabase/migrations/security_hardening_final.sql
 ```
 
 ## 🧪 Testing
+
+### Quick Edge Function Tests
+
+```bash
+# List profiles as admin (replace with your project URL and service role JWT)
+curl -i https://YOUR-PROJECT.supabase.co/functions/v1/admin-profiles \
+  -H "Authorization: Bearer $SERVICE_ROLE_JWT"
+
+# Update credits as admin
+curl -i -X POST https://YOUR-PROJECT.supabase.co/functions/v1/admin-profiles \
+  -H "Authorization: Bearer $SERVICE_ROLE_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"update_credits","p_user_id":"<uuid>","p_delta":25,"p_reason":"adjustment"}'
+```
 
 ### Manual Tests
 
