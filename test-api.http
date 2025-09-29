@@ -1,0 +1,55 @@
+# API Testing Collection
+# Use with REST Client extension in VS Code or import into Postman
+
+### Variables
+@supabase_url = https://your-project.supabase.co
+@anon_key = your-anon-key
+@user_token = your-jwt-token-here
+
+### Test 1: User Profile Access (Authenticated User)
+GET {{supabase_url}}/rest/v1/profiles?id=eq.user-id-here&select=id,email,credits
+Authorization: Bearer {{user_token}}
+apikey: {{anon_key}}
+
+### Test 2: User Profile Access (No Auth) - Should return 401/403
+GET {{supabase_url}}/rest/v1/profiles?select=id,email,credits
+apikey: {{anon_key}}
+
+### Test 3: Admin List All Profiles (Admin User)
+GET {{supabase_url}}/functions/v1/admin-profiles
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+### Test 4: Admin Update Credits (Admin User)
+POST {{supabase_url}}/functions/v1/admin-profiles
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "action": "update_credits",
+  "user_id": "user-uuid-here",
+  "credit_change": 50,
+  "reason": "API test credit adjustment"
+}
+
+### Test 5: Admin Access (Regular User) - Should return 403
+GET {{supabase_url}}/functions/v1/admin-profiles
+Authorization: Bearer {{regular_user_token}}
+Content-Type: application/json
+
+### Test 6: Direct RPC Call (Should fail from browser)
+POST {{supabase_url}}/rest/v1/rpc/admin_list_profiles
+Authorization: Bearer {{user_token}}
+apikey: {{anon_key}}
+Content-Type: application/json
+
+{}
+
+###
+# Expected Results:
+# Test 1: 200 OK with user's own profile
+# Test 2: 401 Unauthorized or 403 Forbidden  
+# Test 3: 200 OK with all profiles (admin only)
+# Test 4: 200 OK with success message (admin only)
+# Test 5: 403 Forbidden (regular user)
+# Test 6: 401/403 (RPC functions revoked from authenticated users)
