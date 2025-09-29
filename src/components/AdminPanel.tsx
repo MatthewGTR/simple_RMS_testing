@@ -25,9 +25,11 @@ export function AdminPanel() {
       setLoading(true);
       setMessage('Loading users...');
       
+      // Note: This will only return the current user's profile due to RLS
+      // For full admin functionality, we'd need a backend endpoint with service role
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, full_name, role, credits, created_at, updated_at')
+        .select('id, email, full_name, credits, created_at, updated_at')
         .order('created_at', { ascending: false });
 
       console.log('Users query result:', { data, error });
@@ -50,6 +52,9 @@ export function AdminPanel() {
   const updateCredits = async (userId: string, creditChange: number) => {
     setUpdating(userId);
     setMessage('');
+    
+    // Note: Due to RLS, users can only update their own credits
+    // For admin functionality, we'd need a backend endpoint
 
     try {
       console.log(`Updating credits for user ${userId} by ${creditChange}`);
@@ -124,9 +129,14 @@ export function AdminPanel() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
         <div className="flex items-center mb-4">
           <Users className="w-6 h-6 text-blue-600 mr-2" />
-          <h2 className="text-xl font-semibold text-gray-900">User Management</h2>
+          <h2 className="text-xl font-semibold text-gray-900">User Management (Limited by RLS)</h2>
         </div>
-        <p className="text-gray-600">Total Users: {users.length}</p>
+        <p className="text-gray-600">
+          Total Users: {users.length} (Note: RLS limits this to your own profile only)
+        </p>
+        <p className="text-sm text-amber-600 mt-2">
+          For full admin functionality, implement a backend endpoint with service role access.
+        </p>
       </div>
 
       {message && (
@@ -145,7 +155,6 @@ export function AdminPanel() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">User</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Role</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Credits</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Joined</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Actions</th>
@@ -161,16 +170,7 @@ export function AdminPanel() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      user.role === 'admin'
-                        ? 'bg-purple-100 text-purple-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm font-medium text-gray-900">{user.credits.toLocaleString()}</p>
+                    <p className="text-sm font-medium text-gray-900">{user.credits?.toLocaleString() || 0}</p>
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-sm text-gray-900">{new Date(user.created_at).toLocaleDateString()}</p>
@@ -187,7 +187,7 @@ export function AdminPanel() {
                       </button>
                       <button
                         onClick={() => updateCredits(user.id, -10)}
-                        disabled={updating === user.id || user.credits < 10}
+                        disabled={updating === user.id || (user.credits || 0) < 10}
                         className="inline-flex items-center px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
                       >
                         <Minus className="w-3 h-3 mr-1" />

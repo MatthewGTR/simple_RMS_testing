@@ -28,23 +28,23 @@ export function Dashboard() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center">
             <div className="bg-blue-100 rounded-lg p-3">
-              <User className="w-6 h-6 text-blue-600" />
+              <CreditCard className="w-6 h-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Role</p>
-              <p className="text-2xl font-bold text-gray-900 capitalize">{profile.role}</p>
+              <p className="text-sm font-medium text-gray-600">Credits</p>
+              <p className="text-2xl font-bold text-gray-900">{profile.credits?.toLocaleString() || 0}</p>
             </div>
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center">
-            <div className="bg-green-100 rounded-lg p-3">
-              <CreditCard className="w-6 h-6 text-green-600" />
+            <div className="bg-purple-100 rounded-lg p-3">
+              <User className="w-6 h-6 text-purple-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Credits</p>
-              <p className="text-2xl font-bold text-gray-900">{profile.credits.toLocaleString()}</p>
+              <p className="text-sm font-medium text-gray-600">Profile</p>
+              <p className="text-2xl font-bold text-gray-900">Active</p>
             </div>
           </div>
         </div>
@@ -72,16 +72,8 @@ export function Dashboard() {
             <p className="text-gray-900 mt-1">{profile.email}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-600">Account Type</label>
-            <p className="text-gray-900 mt-1 capitalize">{profile.role}</p>
-          </div>
-          <div>
             <label className="text-sm font-medium text-gray-600">Current Balance</label>
-            <p className="text-gray-900 mt-1">{profile.credits} credits</p>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-600">Last Updated</label>
-            <p className="text-gray-900 mt-1">{new Date(profile.updated_at).toLocaleString()}</p>
+            <p className="text-gray-900 mt-1">{profile.credits || 0} credits</p>
           </div>
         </div>
       </div>
