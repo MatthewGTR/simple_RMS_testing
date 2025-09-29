@@ -1,52 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, UserProfile } from '../lib/supabase';
-import { Users, Plus, Minus, RefreshCw } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { Users, RefreshCw } from 'lucide-react';
+import { UserProfile } from '../contexts/AuthContext';
 
 export function AdminPanel() {
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
   const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setUsers(data || []);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      setMessage('Error loading users');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateCredits = async (userId: string, creditChange: number) => {
-    setUpdating(userId);
-    setMessage('');
-
-    try {
-      // Use the database function for a safe, atomic update
-      const { error } = await supabase.rpc('update_user_credits', {
-        user_id: userId,
-        credit_change: creditChange,
-      });
-
-      if (error) throw error;
-
-      setMessage(`Credits changed successfully`);
-      await fetchUsers();
-    } catch (error) {
-      console.error('Error updating credits:', error);
-      setMessage('Error updating credits');
-    } finally {
-      setUpdating(null);
-    }
+    setLoading(true);
+    setMessage('Database functionality temporarily disabled for testing');
+    
+    // Mock users for now
+    const mockUsers: UserProfile[] = [
+      {
+        id: '1',
+        email: 'admin@test.com',
+        role: 'admin',
+        credits: 1000,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: '2',
+        email: 'user@test.com',
+        role: 'user',
+        credits: 100,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
+    
+    setUsers(mockUsers);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -86,11 +73,7 @@ export function AdminPanel() {
       </div>
 
       {message && (
-        <div className={`mb-6 p-4 rounded-lg ${
-          message.includes('Error')
-            ? 'bg-red-50 text-red-700 border border-red-200'
-            : 'bg-green-50 text-green-700 border border-green-200'
-        }`}>
+        <div className="mb-6 p-4 rounded-lg bg-yellow-50 text-yellow-700 border border-yellow-200">
           {message}
         </div>
       )}
@@ -104,7 +87,6 @@ export function AdminPanel() {
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Role</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Credits</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Joined</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -130,26 +112,6 @@ export function AdminPanel() {
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-sm text-gray-900">{new Date(user.created_at).toLocaleDateString()}</p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => updateCredits(user.id, 10)}
-                        disabled={updating === user.id}
-                        className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add 10
-                      </button>
-                      <button
-                        onClick={() => updateCredits(user.id, -10)}
-                        disabled={updating === user.id || user.credits < 10}
-                        className="inline-flex items-center px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                      >
-                        <Minus className="w-3 h-3 mr-1" />
-                        Remove 10
-                      </button>
-                    </div>
                   </td>
                 </tr>
               ))}
