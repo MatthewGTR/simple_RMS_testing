@@ -1,63 +1,64 @@
-import React, { useState, useEffect } from 'react'
-import { supabase, UserProfile } from '../lib/supabase'
-import { Users, Plus, Minus, RefreshCw } from 'lucide-react'
+import React, { useState, useEffect } from 'react';
+import { supabase, UserProfile } from '../lib/supabase';
+import { Users, Plus, Minus, RefreshCw } from 'lucide-react';
 
 export function AdminPanel() {
-  const [users, setUsers] = useState<UserProfile[]>([])
-  const [loading, setLoading] = useState(true)
-  const [updating, setUpdating] = useState<string | null>(null)
-  const [message, setMessage] = useState('')
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
 
   const fetchUsers = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false });
 
-      if (error) throw error
-      setUsers(data || [])
+      if (error) throw error;
+      setUsers(data || []);
     } catch (error) {
-      console.error('Error fetching users:', error)
-      setMessage('Error loading users')
+      console.error('Error fetching users:', error);
+      setMessage('Error loading users');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const updateCredits = async (userId: string, creditChange: number) => {
-    setUpdating(userId)
-    setMessage('')
+    setUpdating(userId);
+    setMessage('');
 
     try {
+      // Use the database function for a safe, atomic update
       const { error } = await supabase.rpc('update_user_credits', {
         user_id: userId,
         credit_change: creditChange,
-      })
+      });
 
-      if (error) throw error
+      if (error) throw error;
 
-      setMessage(`Credits ${creditChange > 0 ? 'added' : 'deducted'} successfully`)
-      await fetchUsers() // Refresh the user list
+      setMessage(`Credits changed successfully`);
+      await fetchUsers();
     } catch (error) {
-      console.error('Error updating credits:', error)
-      setMessage('Error updating credits')
+      console.error('Error updating credits:', error);
+      setMessage('Error updating credits');
     } finally {
-      setUpdating(null)
+      setUpdating(null);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchUsers()
-  }, [])
+    fetchUsers();
+  }, []);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
-    )
+    );
   }
 
   return (
@@ -86,8 +87,8 @@ export function AdminPanel() {
 
       {message && (
         <div className={`mb-6 p-4 rounded-lg ${
-          message.includes('Error') 
-            ? 'bg-red-50 text-red-700 border border-red-200' 
+          message.includes('Error')
+            ? 'bg-red-50 text-red-700 border border-red-200'
             : 'bg-green-50 text-green-700 border border-green-200'
         }`}>
           {message}
@@ -117,8 +118,8 @@ export function AdminPanel() {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      user.role === 'admin' 
-                        ? 'bg-purple-100 text-purple-800' 
+                      user.role === 'admin'
+                        ? 'bg-purple-100 text-purple-800'
                         : 'bg-gray-100 text-gray-800'
                     }`}>
                       {user.role}
@@ -157,5 +158,5 @@ export function AdminPanel() {
         </div>
       </div>
     </div>
-  )
+  );
 }
