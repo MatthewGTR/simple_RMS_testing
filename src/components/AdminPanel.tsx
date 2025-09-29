@@ -31,27 +31,15 @@ export function AdminPanel() {
     setMessage('')
 
     try {
-      // Get current user credits
-      const { data: currentUser, error: fetchError } = await supabase
-        .from('user_profiles')
-        .select('credits')
-        .eq('id', userId)
-        .single()
+      const { error } = await supabase.rpc('update_user_credits', {
+        user_id: userId,
+        credit_change: creditChange,
+      })
 
-      if (fetchError) throw fetchError
-
-      const newCredits = Math.max(0, currentUser.credits + creditChange)
-
-      // Update credits
-      const { error: updateError } = await supabase
-        .from('user_profiles')
-        .update({ credits: newCredits })
-        .eq('id', userId)
-
-      if (updateError) throw updateError
+      if (error) throw error
 
       setMessage(`Credits ${creditChange > 0 ? 'added' : 'deducted'} successfully`)
-      await fetchUsers()
+      await fetchUsers() // Refresh the user list
     } catch (error) {
       console.error('Error updating credits:', error)
       setMessage('Error updating credits')
