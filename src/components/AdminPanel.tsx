@@ -1,41 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, UserProfile } from '../lib/supabase';
-import { Users, Plus, Minus, RefreshCw, TestTube } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { Users, Plus, Minus, RefreshCw } from 'lucide-react';
+import { PingSupabase } from './PingSupabase';
+
+type Profile = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  role: string;
+  credits: number;
+  created_at: string;
+  updated_at: string;
+};
 
 export function AdminPanel() {
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [message, setMessage] = useState('');
 
-  const testDatabaseConnection = async () => {
-    try {
-      console.log('=== TESTING DATABASE CONNECTION ===');
-      setMessage('Testing database connection...');
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email')
-        .limit(1);
-
-      console.log('Test query result:', { data, error });
-
-      if (error) {
-        console.error('Database test error:', error);
-        setMessage(`Database error: ${error.message}`);
-      } else {
-        console.log('Database test successful');
-        setMessage(`Database connection successful! Found ${data?.length || 0} profiles.`);
-      }
-    } catch (error) {
-      console.error('Test connection error:', error);
-      setMessage(`Connection test failed: ${(error as Error).message}`);
-    }
-  };
-
   const fetchUsers = async () => {
     try {
-      console.log('=== FETCHING USERS ===');
+      console.log('=== FETCHING USERS FROM PROFILES TABLE ===');
       setLoading(true);
       setMessage('Loading users...');
       
@@ -124,13 +110,7 @@ export function AdminPanel() {
           <p className="text-gray-600 mt-2">Manage users and their credit balances</p>
         </div>
         <div className="flex space-x-2">
-          <button
-            onClick={testDatabaseConnection}
-            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            <TestTube className="w-4 h-4 mr-2" />
-            Test DB
-          </button>
+          <PingSupabase />
           <button
             onClick={fetchUsers}
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

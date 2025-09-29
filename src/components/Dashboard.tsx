@@ -1,6 +1,7 @@
 import React from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { User, CreditCard, Calendar } from 'lucide-react'
+import { PingSupabase } from './PingSupabase'
 
 export function Dashboard() {
   const { profile } = useAuth()
@@ -18,6 +19,9 @@ export function Dashboard() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-600 mt-2">Welcome back! Here's your account overview.</p>
+        <div className="mt-4">
+          <PingSupabase />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

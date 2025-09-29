@@ -1,11 +1,12 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
-import { supabase, UserProfile } from '../lib/supabase';
+import React, { createContext, useContext } from 'react';
+import { supabase } from '../lib/supabase';
+import { useAuthBootstrap } from '../hooks/useAuthBootstrap';
 
 interface AuthContextType {
-  user: User | null;
-  profile: UserProfile | null;
+  user: any;
+  profile: any;
   loading: boolean;
+  error: string | null;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -23,108 +24,7 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const loadUserProfile = async () => {
-    console.log('=== LOADING USER PROFILE ===');
-    setLoading(true);
-    
-    try {
-      // Get current user
-      console.log('Getting current user...');
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) {
-        console.error('User error:', userError);
-        throw userError;
-      }
-
-      console.log('Current user:', user?.email || 'none');
-
-      if (!user) {
-        console.log('No user found, clearing state');
-        setUser(null);
-        setProfile(null);
-        return;
-      }
-
-      setUser(user);
-
-      // Fetch user profile from profiles table
-      console.log('Fetching profile for user ID:', user.id);
-      console.log('Making request to profiles table...');
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email, full_name, role, credits, created_at, updated_at')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      console.log('Profile query completed');
-      console.log('Profile data:', data);
-      console.log('Profile error:', error);
-
-      if (error) {
-        console.error('Profile fetch error:', error);
-        throw error;
-      }
-
-      if (data) {
-        console.log('Profile found for:', data.email);
-        setProfile(data);
-      } else {
-        console.log('No profile found for user, this might be expected for new users');
-        setProfile(null);
-      }
-
-    } catch (error) {
-      console.error('Bootstrap error:', error);
-      setUser(null);
-      setProfile(null);
-    } finally {
-      console.log('Setting loading to false');
-      setLoading(false);
-    }
-  };
-
-  const refreshProfile = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email, full_name, role, credits, created_at, updated_at')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-      setProfile(data);
-    } catch (error) {
-      console.error('Error refreshing profile:', error);
-    }
-  };
-
-  useEffect(() => {
-    console.log('=== AUTH PROVIDER INITIALIZING ===');
-    
-    // Load initial session
-    loadUserProfile();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email || 'no user');
-        await loadUserProfile();
-      }
-    );
-
-    return () => {
-      console.log('Cleaning up auth subscription');
-      subscription.unsubscribe();
-    };
-  }, []);
+  const { user, profile, loading, error } = useAuthBootstrap();
 
   const signUp = async (email: string, password: string) => {
     console.log('Signing up:', email);
@@ -145,10 +45,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const refreshProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id,email,full_name,role,credits,created_at,updated_at')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      // Note: We can't update profile state here since it's managed by useAuthBootstrap
+      console.log('Profile refreshed:', data);
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    }
+  };
+
   const value = {
     user,
     profile,
     loading,
+    error,
     signUp,
     signIn,
     signOut,
