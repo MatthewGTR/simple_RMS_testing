@@ -102,11 +102,11 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        // Update credits using the secure admin function
+        // Update credits using the secure admin function with correct parameter names
         const { data, error } = await supabaseAdmin.rpc('admin_update_credits', {
-          user_id: body.user_id,
-          credit_change: body.credit_change,
-          reason: body.reason || `Admin adjustment by ${user.email}`
+          p_user_id: body.user_id,
+          p_delta: body.credit_change,
+          p_reason: body.reason || `Admin adjustment by ${user.email}`
         });
 
         if (error) {
@@ -120,7 +120,7 @@ Deno.serve(async (req: Request) => {
         const result = data[0];
         if (!result.success) {
           return new Response(
-            JSON.stringify({ error: result.message }),
+            JSON.stringify({ error: result?.message || 'Update failed' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
@@ -128,8 +128,9 @@ Deno.serve(async (req: Request) => {
         return new Response(
           JSON.stringify({ 
             success: true, 
+            old_credits: result.old_credits,
             new_credits: result.new_credits,
-            message: result.message 
+            message: result.message
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
