@@ -31,8 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
     try {
       console.log('Fetching profile for user:', userId)
-      const { data, error } = await supabase
-        .from('user_profiles')
+      
         .select('*')
         .eq('id', userId)
         .maybeSingle()
@@ -142,10 +141,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           emailRedirectTo: undefined // Disable email confirmation
         }
       })
-      // If user was created successfully, create their profile
-      if (data.user) {
-        await createProfileForNewUser(data.user.id, email)
-      }
 
       return { error: null }
     } catch (error) {

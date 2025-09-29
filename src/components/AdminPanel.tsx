@@ -12,7 +12,7 @@ export function AdminPanel() {
     try {
       setLoading(true)
       const { data, error } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .select('*')
         .order('created_at', { ascending: false })
 
@@ -33,7 +33,7 @@ export function AdminPanel() {
     try {
       // Get current user credits
       const { data: currentUser, error: fetchError } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .select('credits')
         .eq('id', userId)
         .single()
@@ -44,7 +44,7 @@ export function AdminPanel() {
 
       // Update credits
       const { error: updateError } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .update({ credits: newCredits })
         .eq('id', userId)
 
