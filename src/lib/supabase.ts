@@ -4,14 +4,28 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 // Debug environment variables
+console.log('=== SUPABASE CLIENT INIT ===')
 console.log('Supabase URL:', supabaseUrl)
 console.log('Supabase Key exists:', !!supabaseAnonKey)
+console.log('Supabase Key length:', supabaseAnonKey?.length || 0)
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
+  console.error('Missing Supabase environment variables!')
+  console.log('VITE_SUPABASE_URL:', supabaseUrl)
+  console.log('VITE_SUPABASE_ANON_KEY exists:', !!supabaseAnonKey)
+  throw new Error('Missing Supabase environment variables. Please check your .env file.')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
+})
+
+// Test the client initialization
+console.log('Supabase client created successfully')
 
 export type UserProfile = {
   id: string

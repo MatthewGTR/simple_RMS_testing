@@ -9,6 +9,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,13 +33,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     try {
       // Get current user
+      console.log('Getting current user...');
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      console.log('Current user:', user?.email || 'none');
       
       if (userError) {
         console.error('User error:', userError);
         throw userError;
       }
+
+      console.log('Current user:', user?.email || 'none');
 
       if (!user) {
         console.log('No user found, clearing state');
@@ -50,14 +53,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(user);
 
       // Fetch user profile from profiles table
-      console.log('Fetching profile for user:', user.id);
+      console.log('Fetching profile for user ID:', user.id);
+      console.log('Making request to profiles table...');
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('id, email, full_name, role, credits, created_at, updated_at')
         .eq('id', user.id)
         .maybeSingle();
 
-      console.log('Profile query result:', { data, error });
+      console.log('Profile query completed');
+      console.log('Profile data:', data);
+      console.log('Profile error:', error);
 
       if (error) {
         console.error('Profile fetch error:', error);
@@ -65,10 +72,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data) {
-        console.log('Profile found:', data.email);
+        console.log('Profile found for:', data.email);
         setProfile(data);
       } else {
-        console.log('No profile found for user');
+        console.log('No profile found for user, this might be expected for new users');
         setProfile(null);
       }
 
@@ -82,6 +89,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, role, credits, created_at, updated_at')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    }
+  };
+
   useEffect(() => {
     console.log('=== AUTH PROVIDER INITIALIZING ===');
     
@@ -91,24 +115,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event);
+        console.log('Auth state changed:', event, session?.user?.email || 'no user');
         await loadUserProfile();
       }
     );
 
     return () => {
+      console.log('Cleaning up auth subscription');
       subscription.unsubscribe();
     };
   }, []);
 
   const signUp = async (email: string, password: string) => {
     console.log('Signing up:', email);
-    return supabase.auth.signUp({ email, password });
+    const result = await supabase.auth.signUp({ email, password });
+    console.log('Sign up result:', result.error ? 'error' : 'success');
+    return result;
   };
 
   const signIn = async (email: string, password: string) => {
     console.log('Signing in:', email);
-    return supabase.auth.signInWithPassword({ email, password });
+    const result = await supabase.auth.signInWithPassword({ email, password });
+    console.log('Sign in result:', result.error ? 'error' : 'success');
+    return result;
   };
 
   const signOut = async () => {
@@ -123,6 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signIn,
     signOut,
+    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

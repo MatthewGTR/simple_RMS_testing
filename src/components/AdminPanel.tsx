@@ -8,10 +8,36 @@ export function AdminPanel() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [message, setMessage] = useState('');
 
+  const testDatabaseConnection = async () => {
+    try {
+      console.log('=== TESTING DATABASE CONNECTION ===');
+      setMessage('Testing database connection...');
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .limit(1);
+
+      console.log('Test query result:', { data, error });
+
+      if (error) {
+        console.error('Database test error:', error);
+        setMessage(`Database error: ${error.message}`);
+      } else {
+        console.log('Database test successful');
+        setMessage(`Database connection successful! Found ${data?.length || 0} profiles.`);
+      }
+    } catch (error) {
+      console.error('Test connection error:', error);
+      setMessage(`Connection test failed: ${(error as Error).message}`);
+    }
+  };
+
   const fetchUsers = async () => {
     try {
+      console.log('=== FETCHING USERS ===');
       setLoading(true);
-      console.log('Fetching users from profiles table...');
+      setMessage('Loading users...');
       
       const { data, error } = await supabase
         .from('profiles')
@@ -29,32 +55,9 @@ export function AdminPanel() {
       setMessage(`Loaded ${data?.length || 0} users successfully`);
     } catch (error) {
       console.error('Error fetching users:', error);
-      setMessage('Error loading users: ' + (error as Error).message);
+      setMessage(`Error loading users: ${(error as Error).message}`);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const testDatabaseConnection = async () => {
-    try {
-      console.log('Testing database connection...');
-      setMessage('Testing connection...');
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email')
-        .limit(1);
-
-      console.log('Test query result:', { data, error });
-
-      if (error) {
-        setMessage('Database error: ' + error.message);
-      } else {
-        setMessage('Database connection successful! Found ' + (data?.length || 0) + ' profiles.');
-      }
-    } catch (error) {
-      console.error('Test error:', error);
-      setMessage('Connection test failed: ' + (error as Error).message);
     }
   };
 
@@ -63,6 +66,8 @@ export function AdminPanel() {
     setMessage('');
 
     try {
+      console.log(`Updating credits for user ${userId} by ${creditChange}`);
+      
       // Get current user credits
       const { data: currentUser, error: fetchError } = await supabase
         .from('profiles')
@@ -70,9 +75,13 @@ export function AdminPanel() {
         .eq('id', userId)
         .single();
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error('Error fetching current credits:', fetchError);
+        throw fetchError;
+      }
 
-      const newCredits = currentUser.credits + creditChange;
+      const newCredits = Math.max(0, currentUser.credits + creditChange);
+      console.log(`Updating credits from ${currentUser.credits} to ${newCredits}`);
 
       // Update credits
       const { error: updateError } = await supabase
@@ -80,13 +89,16 @@ export function AdminPanel() {
         .update({ credits: newCredits })
         .eq('id', userId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Error updating credits:', updateError);
+        throw updateError;
+      }
 
       setMessage(`Credits updated successfully`);
       await fetchUsers();
     } catch (error) {
       console.error('Error updating credits:', error);
-      setMessage('Error updating credits: ' + (error as Error).message);
+      setMessage(`Error updating credits: ${(error as Error).message}`);
     } finally {
       setUpdating(null);
     }
