@@ -1,39 +1,95 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import { Users, RefreshCw } from 'lucide-react';
-import { UserProfile } from '../contexts/AuthContext';
+import { supabase, UserProfile } from '../lib/supabase';
+import { Users, Plus, Minus, RefreshCw, TestTube } from 'lucide-react';
 
 export function AdminPanel() {
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState<string | null>(null);
   const [message, setMessage] = useState('');
 
   const fetchUsers = async () => {
-    setLoading(true);
-    setMessage('Database functionality temporarily disabled for testing');
-    
-    // Mock users for now
-    const mockUsers: UserProfile[] = [
-      {
-        id: '1',
-        email: 'admin@test.com',
-        role: 'admin',
-        credits: 1000,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        id: '2',
-        email: 'user@test.com',
-        role: 'user',
-        credits: 100,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+    try {
+      setLoading(true);
+      console.log('Fetching users from profiles table...');
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, role, credits, created_at, updated_at')
+        .order('created_at', { ascending: false });
+
+      console.log('Users query result:', { data, error });
+
+      if (error) {
+        console.error('Error fetching users:', error);
+        throw error;
       }
-    ];
-    
-    setUsers(mockUsers);
-    setLoading(false);
+
+      setUsers(data || []);
+      setMessage(`Loaded ${data?.length || 0} users successfully`);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setMessage('Error loading users: ' + (error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const testDatabaseConnection = async () => {
+    try {
+      console.log('Testing database connection...');
+      setMessage('Testing connection...');
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .limit(1);
+
+      console.log('Test query result:', { data, error });
+
+      if (error) {
+        setMessage('Database error: ' + error.message);
+      } else {
+        setMessage('Database connection successful! Found ' + (data?.length || 0) + ' profiles.');
+      }
+    } catch (error) {
+      console.error('Test error:', error);
+      setMessage('Connection test failed: ' + (error as Error).message);
+    }
+  };
+
+  const updateCredits = async (userId: string, creditChange: number) => {
+    setUpdating(userId);
+    setMessage('');
+
+    try {
+      // Get current user credits
+      const { data: currentUser, error: fetchError } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', userId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const newCredits = currentUser.credits + creditChange;
+
+      // Update credits
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ credits: newCredits })
+        .eq('id', userId);
+
+      if (updateError) throw updateError;
+
+      setMessage(`Credits updated successfully`);
+      await fetchUsers();
+    } catch (error) {
+      console.error('Error updating credits:', error);
+      setMessage('Error updating credits: ' + (error as Error).message);
+    } finally {
+      setUpdating(null);
+    }
   };
 
   useEffect(() => {
@@ -55,13 +111,22 @@ export function AdminPanel() {
           <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
           <p className="text-gray-600 mt-2">Manage users and their credit balances</p>
         </div>
-        <button
-          onClick={fetchUsers}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
-        </button>
+        <div className="flex space-x-2">
+          <button
+            onClick={testDatabaseConnection}
+            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            <TestTube className="w-4 h-4 mr-2" />
+            Test DB
+          </button>
+          <button
+            onClick={fetchUsers}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
@@ -73,7 +138,11 @@ export function AdminPanel() {
       </div>
 
       {message && (
-        <div className="mb-6 p-4 rounded-lg bg-yellow-50 text-yellow-700 border border-yellow-200">
+        <div className={`mb-6 p-4 rounded-lg ${
+          message.includes('Error') || message.includes('error')
+            ? 'bg-red-50 text-red-700 border border-red-200'
+            : 'bg-green-50 text-green-700 border border-green-200'
+        }`}>
           {message}
         </div>
       )}
@@ -87,6 +156,7 @@ export function AdminPanel() {
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Role</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Credits</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Joined</th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -112,6 +182,26 @@ export function AdminPanel() {
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-sm text-gray-900">{new Date(user.created_at).toLocaleDateString()}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => updateCredits(user.id, 10)}
+                        disabled={updating === user.id}
+                        className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add 10
+                      </button>
+                      <button
+                        onClick={() => updateCredits(user.id, -10)}
+                        disabled={updating === user.id || user.credits < 10}
+                        className="inline-flex items-center px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                      >
+                        <Minus className="w-3 h-3 mr-1" />
+                        Remove 10
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

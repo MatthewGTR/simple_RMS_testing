@@ -6,13 +6,10 @@ import { Dashboard } from './components/Dashboard'
 import { AdminPanel } from './components/AdminPanel'
 
 function AppContent() {
-  console.log('=== APP CONTENT RENDERING ===');
   const { user, profile, loading } = useAuth()
-  console.log('Auth state:', { user: !!user, profile: !!profile, loading });
   const [activeView, setActiveView] = useState<'dashboard' | 'admin'>('dashboard')
 
   if (loading) {
-    console.log('Showing loading spinner');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
