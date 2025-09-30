@@ -129,9 +129,9 @@ export function AdminPanel() {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('id,email,credits')
+        .select('id,email,full_name,role,credits,created_at,updated_at')
         .eq('id', user?.id)
-        .maybeSingle();
+        .single();
       
       console.log('User profile ping - data:', data, 'error:', error);
       
@@ -145,7 +145,13 @@ export function AdminPanel() {
         } else {
           setMessage(`⚠️ Ping successful but no profile found for user ${user.email}`);
           setError('Profile not found - may need to be created');
-        }
+      console.log('Profile refreshed:', data);
+      console.log('User role from database:', data?.role);
+      
+      // Force a page reload to refresh auth context if role changed
+      if (data?.role !== profile?.role) {
+        console.log('Role changed, reloading page...');
+        window.location.reload();
       }
     } catch (error) {
       console.error('Ping error:', error);
