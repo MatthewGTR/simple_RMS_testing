@@ -117,8 +117,16 @@ export function AdminPanel() {
   };
 
   const pingSupabase = async () => {
+    if (!user) {
+      setMessage('No user session - please sign in first');
+      return;
+    }
+
     try {
+      setMessage('Testing user profile access...');
       console.log('=== PINGING SUPABASE (User Profile) ===');
+      console.log('Current user ID:', user.id);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('id,email,credits')
@@ -128,13 +136,21 @@ export function AdminPanel() {
       console.log('User profile ping - data:', data, 'error:', error);
       
       if (error) {
-        setMessage(`Ping error: ${error.message}`);
+        setMessage(`❌ Ping error: ${error.message}`);
+        setError(`Profile access failed: ${error.message}`);
       } else {
-        setMessage(`Ping successful: Found profile for ${data?.email || 'unknown'} with ${data?.credits || 0} credits`);
+        if (data) {
+          setMessage(`✅ Ping successful: Found profile for ${data.email || 'unknown'} with ${data.credits || 0} credits`);
+          setError(null);
+        } else {
+          setMessage(`⚠️ Ping successful but no profile found for user ${user.email}`);
+          setError('Profile not found - may need to be created');
+        }
       }
     } catch (error) {
       console.error('Ping error:', error);
-      setMessage(`Ping failed: ${(error as Error).message}`);
+      setMessage(`❌ Ping failed: ${(error as Error).message}`);
+      setError(`Unexpected error: ${(error as Error).message}`);
     }
   };
 
