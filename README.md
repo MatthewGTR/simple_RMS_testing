@@ -107,6 +107,28 @@ Run the migration to set up the complete schema:
 
 ## 🧪 Testing
 
+### Making Users Admin
+
+To upgrade a user to admin role, run this SQL in your Supabase SQL Editor:
+
+```sql
+-- Find the user
+SELECT id, email, role FROM public.profiles WHERE email = 'user@example.com';
+
+-- Upgrade to admin
+UPDATE public.profiles 
+SET role = 'admin', updated_at = now() 
+WHERE email = 'user@example.com';
+
+-- Verify the change
+SELECT id, email, role FROM public.profiles WHERE email = 'user@example.com';
+```
+
+**Important**: 
+- Only do this through the Supabase dashboard/SQL editor
+- Never expose admin role changes to the frontend
+- The user will need to refresh their browser to see admin panel access
+
 ### Quick Edge Function Tests
 
 ```bash
