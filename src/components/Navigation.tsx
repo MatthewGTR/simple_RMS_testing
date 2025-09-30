@@ -14,7 +14,9 @@ export function Navigation({ activeView, onViewChange }: NavigationProps) {
     try {
       await signOut()
     } catch (error) {
-      console.error('Error signing out:', error)
+      if (error?.name !== 'AuthSessionMissingError') {
+        console.error('Error signing out:', error)
+      }
     }
   }
 

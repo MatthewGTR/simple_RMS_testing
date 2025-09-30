@@ -41,8 +41,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    console.log('Signing out');
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut(); // local scope is fine by default
+    } catch (e: any) {
+      if (e?.name !== 'AuthSessionMissingError') {
+        console.error('signOut error', e);
+      }
+    }
   };
 
   const refreshProfile = async () => {

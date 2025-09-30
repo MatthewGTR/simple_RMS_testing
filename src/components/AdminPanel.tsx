@@ -139,7 +139,13 @@ export function AdminPanel() {
   };
 
   useEffect(() => {
-    if (user && profile) {
+    if (!user) {
+      setLoading(false);
+      setError('Please sign in to access admin panel');
+      return;
+    }
+
+    if (profile) {
       if (isAdmin) {
         fetchProfiles();
       } else {

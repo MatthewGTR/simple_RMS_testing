@@ -6,10 +6,7 @@ type Profile = {
   id: string; 
   email: string | null; 
   full_name: string | null; 
-  role: string;
-  credits: number;
-  created_at: string;
-  updated_at: string;
+  credits: number | null;
 };
 
 export function useAuthBootstrap() {
@@ -23,81 +20,63 @@ export function useAuthBootstrap() {
 
     async function load() {
       try {
-        console.log('=== LOADING USER PROFILE ===');
         setLoading(true);
-        setError(null);
 
-        const { data: { user }, error: uerr } = await supabase.auth.getUser();
-        if (uerr) {
-          console.error('Auth error:', uerr);
-          setError(uerr.message);
+        // Gate everything on the session.
+        const { data: { session }, error: sErr } = await supabase.auth.getSession();
+        if (sErr) throw sErr;
+
+        if (!session) {
           setUser(null);
           setProfile(null);
           return;
         }
 
-        console.log('Current user:', user?.email || 'none');
-
-        if (!user) {
-          console.log('No user found, clearing state');
-          setUser(null);
-          setProfile(null);
-          return;
-        }
-
+        // We have a session.
+        const user = session.user;
         setUser(user);
 
-        console.log('Fetching profile for user ID:', user.id);
-        const { data, error } = await supabase
+        const { data: prof, error: pErr } = await supabase
           .from('profiles')
-          .select('id,email,full_name,role,credits,created_at,updated_at')
+          .select('id,email,full_name,credits')
           .eq('id', user.id)
           .maybeSingle();
 
-        console.log('Profile query result - data:', data, 'error:', error);
+        if (pErr) throw pErr;
 
-        if (error) {
-          console.error('Profile fetch error:', {
-            code: error.code,
-            message: error.message,
-            details: error.details,
-            hint: error.hint
-          });
-          setError(error.message);
-          setProfile(null);
-          return;
-        }
-
-        setProfile(data ?? null);
-        console.log('Profile set:', data?.email || 'none', 'role:', data?.role || 'none');
+        setProfile(prof ?? null);
       } catch (e: any) {
-        console.error('Auth bootstrap error:', {
-          message: e?.message,
-          code: e?.code,
-          details: e?.details,
-          hint: e?.hint
-        });
-        setError(e?.message ?? String(e));
-        setUser(null);
-        setProfile(null);
-      } finally {
-        if (!cancelled) {
-          console.log('Setting loading to false');
-          setLoading(false);
+        // Treat missing session as signed out rather than an error.
+        if (e?.name === 'AuthSessionMissingError' || e?.__isAuthError) {
+          setUser(null);
+          setProfile(null);
+        } else {
+          console.error('Auth bootstrap error', e);
+          setError(e?.message ?? String(e));
+          setProfile(null);
         }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
 
     load();
-    
+
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email || 'no user');
-      load();
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setProfile(null);
+      }
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setUser(session?.user ?? null);
+        // Reload profile when signed in
+        load();
+      }
     });
-    
-    return () => { 
-      cancelled = true; 
-      sub.subscription.unsubscribe(); 
+
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
     };
   }, []);
 
