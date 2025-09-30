@@ -30,7 +30,10 @@ export function useAuthBootstrap() {
         const { data: { user }, error: uerr } = await supabase.auth.getUser();
         if (uerr) {
           console.error('Auth error:', uerr);
-          throw uerr;
+          setError(uerr.message);
+          setUser(null);
+          setProfile(null);
+          return;
         }
 
         console.log('Current user:', user?.email || 'none');
@@ -60,7 +63,9 @@ export function useAuthBootstrap() {
             details: error.details,
             hint: error.hint
           });
-          throw error;
+          setError(error.message);
+          setProfile(null);
+          return;
         }
 
         setProfile(data ?? null);
@@ -73,6 +78,7 @@ export function useAuthBootstrap() {
           hint: e?.hint
         });
         setError(e?.message ?? String(e));
+        setUser(null);
         setProfile(null);
       } finally {
         if (!cancelled) {
