@@ -62,7 +62,9 @@ export function Navigation({ activeView, onViewChange }: NavigationProps) {
           <div className="flex items-center space-x-4">
             <div className="text-right">
               <p className="text-sm font-medium text-gray-900">{profile?.email}</p>
-              <p className="text-xs text-gray-500">User</p>
+              <p className="text-xs text-gray-500">
+                {profile?.role === 'admin' ? '👑 Admin' : '👤 User'}
+              </p>
             </div>
             <button
               onClick={handleSignOut}
