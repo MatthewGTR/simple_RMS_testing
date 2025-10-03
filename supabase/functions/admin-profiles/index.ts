@@ -31,14 +31,21 @@ serve(async (req) => {
     if (req.method === "POST") {
       const body = await req.json()
       const { p_user_id, p_delta, p_reason } = body
-      const { error } = await svc.rpc("admin_update_credits", { p_user_id, p_delta, p_reason })
-      if (error) throw error
-      return Response.json({ ok: true }, { headers })
+      console.log('Calling admin_update_credits with:', { p_user_id, p_delta, p_reason })
+      const { data, error } = await svc.rpc("admin_update_credits", { p_user_id, p_delta, p_reason })
+      if (error) {
+        console.error('admin_update_credits error:', error)
+        throw error
+      }
+      console.log('admin_update_credits success:', data)
+      return Response.json({ ok: true, data }, { headers })
     }
 
     return Response.json({ error: "Method not allowed" }, { status: 405, headers })
-  } catch (e) {
-    return Response.json({ error: String(e) }, { status: 500, headers })
+  } catch (e: any) {
+    console.error('Edge function error:', e)
+    const errorMessage = e?.message || e?.details || e?.hint || JSON.stringify(e)
+    return Response.json({ error: errorMessage }, { status: 500, headers })
   }
 })
 
