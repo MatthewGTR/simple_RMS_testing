@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
-type Profile = { 
-  id: string; 
-  email: string | null; 
-  full_name: string | null; 
+type Profile = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  role: string;
   credits: number | null;
 };
 
@@ -38,7 +39,7 @@ export function useAuthBootstrap() {
 
         const { data: prof, error: pErr } = await supabase
           .from('profiles')
-          .select('id,email,full_name,credits')
+          .select('id,email,full_name,role,credits')
           .eq('id', user.id)
           .maybeSingle();
 

@@ -20,6 +20,7 @@ export function AdminPanel() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
 
   const isAdmin = profile?.role === 'admin';
 
@@ -56,8 +57,8 @@ export function AdminPanel() {
       }
 
       const data = await response.json();
-      setProfiles(data.profiles || []);
-      setMessage(`Loaded ${data.profiles?.length || 0} profiles successfully`);
+      setProfiles(Array.isArray(data) ? data : []);
+      setMessage(`Loaded ${Array.isArray(data) ? data.length : 0} profiles successfully`);
     } catch (error) {
       console.error('Error fetching profiles:', error);
       setError(`Failed to load profiles: ${(error as Error).message}`);
@@ -91,10 +92,9 @@ export function AdminPanel() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          action: 'update_credits',
           p_user_id: userId,
           p_delta: creditChange,
-          reason: `Admin adjustment: ${creditChange > 0 ? 'added' : 'removed'} ${Math.abs(creditChange)} credits`
+          p_reason: `Admin adjustment: ${creditChange > 0 ? 'added' : 'removed'} ${Math.abs(creditChange)} credits`
         }),
       });
 
@@ -104,8 +104,15 @@ export function AdminPanel() {
       }
 
       const data = await response.json();
-      setMessage(`Credits updated successfully. New balance: ${data.new_credits || 'unknown'}`);
-      
+      setMessage(`Credits updated successfully`);
+
+      // Clear custom amount for this user
+      setCustomAmounts(prev => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+
       // Refresh the profiles list
       await fetchProfiles();
     } catch (error) {
@@ -306,23 +313,47 @@ export function AdminPanel() {
                     <p className="text-sm text-gray-900">{new Date(userProfile.created_at).toLocaleDateString()}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => updateCredits(userProfile.id, 10)}
-                        disabled={updating === userProfile.id}
-                        className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add 10
-                      </button>
-                      <button
-                        onClick={() => updateCredits(userProfile.id, -10)}
-                        disabled={updating === userProfile.id || (userProfile.credits || 0) < 10}
-                        className="inline-flex items-center px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                      >
-                        <Minus className="w-3 h-3 mr-1" />
-                        Remove 10
-                      </button>
+                    <div className="flex flex-col space-y-2">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => updateCredits(userProfile.id, 10)}
+                          disabled={updating === userProfile.id}
+                          className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          +10
+                        </button>
+                        <button
+                          onClick={() => updateCredits(userProfile.id, -10)}
+                          disabled={updating === userProfile.id || (userProfile.credits || 0) < 10}
+                          className="inline-flex items-center px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                        >
+                          <Minus className="w-3 h-3 mr-1" />
+                          -10
+                        </button>
+                      </div>
+                      <div className="flex space-x-2">
+                        <input
+                          type="number"
+                          placeholder="Amount"
+                          value={customAmounts[userProfile.id] || ''}
+                          onChange={(e) => setCustomAmounts(prev => ({ ...prev, [userProfile.id]: e.target.value }))}
+                          disabled={updating === userProfile.id}
+                          className="w-20 px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                        />
+                        <button
+                          onClick={() => {
+                            const amount = parseInt(customAmounts[userProfile.id] || '0');
+                            if (amount !== 0 && !isNaN(amount)) {
+                              updateCredits(userProfile.id, amount);
+                            }
+                          }}
+                          disabled={updating === userProfile.id || !customAmounts[userProfile.id] || parseInt(customAmounts[userProfile.id]) === 0}
+                          className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                        >
+                          Apply
+                        </button>
+                      </div>
                     </div>
                   </td>
                 </tr>
