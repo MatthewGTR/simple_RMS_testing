@@ -1,155 +1,52 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-};
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
+const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 
-interface AdminRequest {
-  action: 'list' | 'update_credits';
-  user_id?: string;
-  credit_change?: number;
-  reason?: string;
-}
-
-Deno.serve(async (req: Request) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 200, headers: corsHeaders });
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders(req) })
   }
+  const headers = corsHeaders(req)
 
   try {
-    // Initialize Supabase client with service role key
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
+    const authHeader = req.headers.get("Authorization") || ""
+    const jwt = authHeader.replace("Bearer ", "")
+    if (!jwt) return new Response("Missing token", { status: 401, headers })
 
-    // Verify the request is from an authenticated admin user
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const svc = createClient(SUPABASE_URL, SERVICE_KEY)
+    const { data: { user }, error: uerr } = await svc.auth.getUser(jwt)
+    if (uerr || !user) return new Response("Invalid token", { status: 401, headers })
+
+    const { data: isAdminData, error: aerr } = await svc.rpc("is_admin", { p_uid: user.id })
+    if (aerr || !isAdminData) return new Response("Forbidden", { status: 403, headers })
+
+    if (req.method === "GET") {
+      const { data, error } = await svc.rpc("admin_list_profiles")
+      if (error) throw error
+      return Response.json(data, { headers })
     }
 
-    // Verify the user token with the regular client (not service role)
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
-
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (req.method === "POST") {
+      const body = await req.json()
+      const { p_user_id, p_delta, p_reason } = body
+      const { error } = await svc.rpc("admin_update_credits", { p_user_id, p_delta, p_reason })
+      if (error) throw error
+      return Response.json({ ok: true }, { headers })
     }
 
-    // Check if user is admin by querying their profile with service role
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || profile?.role !== 'admin') {
-      return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Handle different admin actions
-    if (req.method === 'GET') {
-      // List all profiles using the secure admin function
-      const { data, error } = await supabaseAdmin.rpc('admin_list_profiles');
-
-      if (error) {
-        console.error('Error calling admin_list_profiles:', error);
-        return new Response(
-          JSON.stringify({ error: 'Failed to fetch profiles', details: error.message }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      return new Response(
-        JSON.stringify({ profiles: data }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (req.method === 'POST') {
-      const body: AdminRequest = await req.json();
-
-      if (body.action === 'update_credits') {
-        if (!body.p_user_id || body.p_delta === undefined) {
-          return new Response(
-            JSON.stringify({ error: 'Missing p_user_id or p_delta' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        // Update credits using the secure admin function with correct parameter names
-        const { data, error } = await supabaseAdmin.rpc('admin_update_credits', {
-          p_user_id: body.p_user_id,
-          p_delta: body.p_delta,
-          p_reason: body.reason || `Admin adjustment by ${user.email}`
-        });
-
-        if (error) {
-          console.error('Error calling admin_update_credits:', error);
-          return new Response(
-            JSON.stringify({ error: 'Failed to update credits', details: error.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        if (!data || data.length === 0) {
-          return new Response(
-            JSON.stringify({ error: 'No data returned from update' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        const result = data[0];
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            user_id: result.id,
-            new_credits: result.credits,
-            message: `Credits updated successfully`
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Admin function error:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error', 
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response("Method not allowed", { status: 405, headers })
+  } catch (e) {
+    return new Response(`Error ${e}`, { status: 500, headers })
   }
-});
+})
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") ?? "*"
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Headers": "authorization, content-type",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  }
+}

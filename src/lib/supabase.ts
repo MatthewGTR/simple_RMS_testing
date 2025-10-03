@@ -1,20 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
 
-console.log('=== SUPABASE CLIENT INIT ===');
-console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
-console.log('VITE_SUPABASE_ANON_KEY exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+const url = import.meta.env.VITE_SUPABASE_URL as string
+const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL!,
-  import.meta.env.VITE_SUPABASE_ANON_KEY!,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
-    }
-  }
-);
+export const supabase = createClient(url, anon, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+})
 
 export type Profile = {
   id: string;
@@ -24,4 +15,4 @@ export type Profile = {
   credits: number;
   created_at: string;
   updated_at: string;
-};
+}
