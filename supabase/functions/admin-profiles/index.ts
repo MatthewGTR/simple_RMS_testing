@@ -13,14 +13,14 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization") || ""
     const jwt = authHeader.replace("Bearer ", "")
-    if (!jwt) return new Response("Missing token", { status: 401, headers })
+    if (!jwt) return Response.json({ error: "Missing token" }, { status: 401, headers })
 
     const svc = createClient(SUPABASE_URL, SERVICE_KEY)
     const { data: { user }, error: uerr } = await svc.auth.getUser(jwt)
-    if (uerr || !user) return new Response("Invalid token", { status: 401, headers })
+    if (uerr || !user) return Response.json({ error: "Invalid token" }, { status: 401, headers })
 
     const { data: isAdminData, error: aerr } = await svc.rpc("is_admin", { p_uid: user.id })
-    if (aerr || !isAdminData) return new Response("Forbidden", { status: 403, headers })
+    if (aerr || !isAdminData) return Response.json({ error: "Forbidden" }, { status: 403, headers })
 
     if (req.method === "GET") {
       const { data, error } = await svc.rpc("admin_list_profiles")
@@ -36,9 +36,9 @@ serve(async (req) => {
       return Response.json({ ok: true }, { headers })
     }
 
-    return new Response("Method not allowed", { status: 405, headers })
+    return Response.json({ error: "Method not allowed" }, { status: 405, headers })
   } catch (e) {
-    return new Response(`Error ${e}`, { status: 500, headers })
+    return Response.json({ error: String(e) }, { status: 500, headers })
   }
 })
 
