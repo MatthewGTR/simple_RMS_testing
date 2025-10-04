@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { Users, Plus, Minus, RefreshCw, AlertCircle, UserPlus, UserMinus, CheckCircle, XCircle } from 'lucide-react';
+import { Users, Plus, Minus, RefreshCw, AlertCircle, UserPlus, UserMinus, CheckCircle, XCircle, Search, ArrowUpDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 type Profile = {
@@ -36,6 +36,9 @@ export function AdminPanel() {
   const [error, setError] = useState<string | null>(null);
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
   const [showPendingApprovals, setShowPendingApprovals] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortField, setSortField] = useState<keyof Profile>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   const isSuperAdmin = profile?.role === 'super_admin';
@@ -211,6 +214,51 @@ export function AdminPanel() {
     }
   };
 
+  const handleSort = (field: keyof Profile) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const filteredAndSortedProfiles = useMemo(() => {
+    let filtered = profiles;
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = profiles.filter(p =>
+        p.email?.toLowerCase().includes(query) ||
+        p.full_name?.toLowerCase().includes(query) ||
+        p.id.toLowerCase().includes(query) ||
+        p.role.toLowerCase().includes(query)
+      );
+    }
+
+    const sorted = [...filtered].sort((a, b) => {
+      let aVal = a[sortField];
+      let bVal = b[sortField];
+
+      if (aVal === null || aVal === undefined) aVal = '';
+      if (bVal === null || bVal === undefined) bVal = '';
+
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return sortDirection === 'asc'
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
+
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+
+      return 0;
+    });
+
+    return sorted;
+  }, [profiles, searchQuery, sortField, sortDirection]);
+
   const handleApproval = async (requestId: number, approve: boolean, notes?: string) => {
     if (!isSuperAdmin) {
       setError('Super admin access required');
@@ -377,12 +425,24 @@ export function AdminPanel() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-        <div className="flex items-center mb-4">
-          <Users className="w-6 h-6 text-blue-600 mr-2" />
-          <h2 className="text-xl font-semibold text-gray-900">User Management</h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <Users className="w-6 h-6 text-blue-600 mr-2" />
+            <h2 className="text-xl font-semibold text-gray-900">User Management</h2>
+          </div>
+          <div className="relative">
+            <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
+            />
+          </div>
         </div>
         <p className="text-gray-600">
-          Total Users: {profiles.length}
+          Total Users: {profiles.length} {searchQuery && `(${filteredAndSortedProfiles.length} shown)`}
         </p>
         <p className="text-sm text-green-600 mt-2">
           ✅ Full admin access via secure backend endpoint
@@ -469,15 +529,59 @@ export function AdminPanel() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">User</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Role</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Credits</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Joined</th>
+                <th
+                  onClick={() => handleSort('email')}
+                  className="px-6 py-4 text-left text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>User</span>
+                    <ArrowUpDown className="w-4 h-4" />
+                    {sortField === 'email' && (
+                      <span className="text-blue-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('role')}
+                  className="px-6 py-4 text-left text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>Role</span>
+                    <ArrowUpDown className="w-4 h-4" />
+                    {sortField === 'role' && (
+                      <span className="text-blue-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('credits')}
+                  className="px-6 py-4 text-left text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>Credits</span>
+                    <ArrowUpDown className="w-4 h-4" />
+                    {sortField === 'credits' && (
+                      <span className="text-blue-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('created_at')}
+                  className="px-6 py-4 text-left text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>Joined</span>
+                    <ArrowUpDown className="w-4 h-4" />
+                    {sortField === 'created_at' && (
+                      <span className="text-blue-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {profiles.map((userProfile) => (
+              {filteredAndSortedProfiles.map((userProfile) => (
                 <tr key={userProfile.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
                     <div>
@@ -578,9 +682,11 @@ export function AdminPanel() {
         </div>
       </div>
 
-      {profiles.length === 0 && !loading && !error && (
+      {filteredAndSortedProfiles.length === 0 && !loading && !error && (
         <div className="text-center py-8 text-gray-500">
-          No profiles found. Try refreshing or check your admin permissions.
+          {searchQuery
+            ? `No users found matching "${searchQuery}"`
+            : 'No profiles found. Try refreshing or check your admin permissions.'}
         </div>
       )}
     </div>
