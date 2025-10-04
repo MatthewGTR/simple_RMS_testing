@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { Users, Plus, Minus, RefreshCw, AlertCircle, UserPlus, UserMinus, CheckCircle, XCircle, Search, ArrowUpDown } from 'lucide-react';
+import { Users, Plus, Minus, RefreshCw, AlertCircle, UserPlus, UserMinus, CheckCircle, XCircle, Search, ArrowUpDown, History } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { TransactionHistory } from './TransactionHistory';
 
 type Profile = {
   id: string;
@@ -39,6 +40,7 @@ export function AdminPanel() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<keyof Profile>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [selectedUserForHistory, setSelectedUserForHistory] = useState<{ id: string; email: string } | null>(null);
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   const isSuperAdmin = profile?.role === 'super_admin';
@@ -658,6 +660,15 @@ export function AdminPanel() {
                           <Minus className="w-3 h-3 mr-1" />
                           -10
                         </button>
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => setSelectedUserForHistory({ id: userProfile.id, email: userProfile.email || 'Unknown' })}
+                            className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm"
+                            title="View Transaction History"
+                          >
+                            <History className="w-3 h-3" />
+                          </button>
+                        )}
                       </div>
                       <div className="flex space-x-2">
                         <input
@@ -696,6 +707,14 @@ export function AdminPanel() {
             ? `No users found matching "${searchQuery}"`
             : 'No profiles found. Try refreshing or check your admin permissions.'}
         </div>
+      )}
+
+      {selectedUserForHistory && (
+        <TransactionHistory
+          userId={selectedUserForHistory.id}
+          userEmail={selectedUserForHistory.email}
+          onClose={() => setSelectedUserForHistory(null)}
+        />
       )}
     </div>
   );
