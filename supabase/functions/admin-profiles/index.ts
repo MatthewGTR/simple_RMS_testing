@@ -23,9 +23,15 @@ Deno.serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     const { createClient } = await import("npm:@supabase/supabase-js@2");
     const svc = createClient(supabaseUrl, serviceKey);
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: {
+        headers: { Authorization: authHeader }
+      }
+    });
 
     const { data: { user }, error: uerr } = await svc.auth.getUser(jwt);
     if (uerr || !user) {
@@ -65,9 +71,12 @@ Deno.serve(async (req: Request) => {
         }
         const { p_user_id, p_delta, p_reason } = body;
         console.log('Super admin applying credits:', { p_user_id, p_delta, p_reason });
-        const { error } = await svc.rpc("admin_update_credits", { p_user_id, p_delta, p_reason });
-        if (error) throw error;
-        return Response.json({ ok: true }, { headers: corsHeaders });
+        const { data, error } = await userClient.rpc("admin_update_credits", { p_user_id, p_delta, p_reason });
+        if (error) {
+          console.error('Error calling admin_update_credits:', error);
+          throw error;
+        }
+        return Response.json({ ok: true, data }, { headers: corsHeaders });
       }
 
       if (action === "request-credits") {
@@ -104,9 +113,12 @@ Deno.serve(async (req: Request) => {
         }
         const { p_user_id, p_new_role } = body;
         console.log('Super admin promoting user:', { p_user_id, p_new_role });
-        const { error } = await svc.rpc("promote_user", { p_user_id, p_new_role });
-        if (error) throw error;
-        return Response.json({ ok: true }, { headers: corsHeaders });
+        const { data, error } = await userClient.rpc("admin_update_role", { p_user_id, p_new_role });
+        if (error) {
+          console.error('Error calling admin_update_role:', error);
+          throw error;
+        }
+        return Response.json({ ok: true, data }, { headers: corsHeaders });
       }
 
       return Response.json({ error: "Invalid action" }, { status: 400, headers: corsHeaders });
