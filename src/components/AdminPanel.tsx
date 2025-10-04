@@ -236,7 +236,15 @@ export function AdminPanel() {
       );
     }
 
+    const roleOrder = { 'super_admin': 0, 'admin': 1, 'user': 2 };
+
     const sorted = [...filtered].sort((a, b) => {
+      if (sortField === 'role') {
+        const aOrder = roleOrder[a.role as keyof typeof roleOrder] ?? 999;
+        const bOrder = roleOrder[b.role as keyof typeof roleOrder] ?? 999;
+        return sortDirection === 'asc' ? aOrder - bOrder : bOrder - aOrder;
+      }
+
       let aVal = a[sortField];
       let bVal = b[sortField];
 
