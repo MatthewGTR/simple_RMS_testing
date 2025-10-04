@@ -610,26 +610,65 @@ export function AdminPanel() {
                       }`}>
                         {userProfile.role === 'super_admin' ? 'Super Admin' : userProfile.role}
                       </span>
-                      {isSuperAdmin && userProfile.id !== user?.id && userProfile.role !== 'super_admin' && (
+                      {isSuperAdmin && userProfile.id !== user?.id && (
                         <div className="flex space-x-1">
                           {userProfile.role === 'user' ? (
-                            <button
-                              onClick={() => promoteUser(userProfile.id, 'admin')}
-                              disabled={updating === userProfile.id}
-                              className="p-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50 transition-colors"
-                              title="Promote to Admin"
-                            >
-                              <UserPlus className="w-3 h-3" />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => promoteUser(userProfile.id, 'admin')}
+                                disabled={updating === userProfile.id}
+                                className="p-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50 transition-colors text-xs"
+                                title="Promote to Admin"
+                              >
+                                Admin
+                              </button>
+                              <button
+                                onClick={() => promoteUser(userProfile.id, 'super_admin')}
+                                disabled={updating === userProfile.id}
+                                className="p-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 disabled:opacity-50 transition-colors text-xs"
+                                title="Promote to Super Admin"
+                              >
+                                Super
+                              </button>
+                            </>
+                          ) : userProfile.role === 'admin' ? (
+                            <>
+                              <button
+                                onClick={() => promoteUser(userProfile.id, 'super_admin')}
+                                disabled={updating === userProfile.id}
+                                className="p-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 disabled:opacity-50 transition-colors text-xs"
+                                title="Promote to Super Admin"
+                              >
+                                <UserPlus className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={() => promoteUser(userProfile.id, 'user')}
+                                disabled={updating === userProfile.id}
+                                className="p-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                                title="Demote to User"
+                              >
+                                <UserMinus className="w-3 h-3" />
+                              </button>
+                            </>
                           ) : (
-                            <button
-                              onClick={() => promoteUser(userProfile.id, 'user')}
-                              disabled={updating === userProfile.id}
-                              className="p-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50 transition-colors"
-                              title="Demote to User"
-                            >
-                              <UserMinus className="w-3 h-3" />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => promoteUser(userProfile.id, 'admin')}
+                                disabled={updating === userProfile.id}
+                                className="p-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50 transition-colors text-xs"
+                                title="Demote to Admin"
+                              >
+                                <UserMinus className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={() => promoteUser(userProfile.id, 'user')}
+                                disabled={updating === userProfile.id}
+                                className="p-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                                title="Demote to User"
+                              >
+                                <UserMinus className="w-3 h-3" />
+                              </button>
+                            </>
                           )}
                         </div>
                       )}

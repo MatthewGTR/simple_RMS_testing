@@ -46,15 +46,20 @@ function AppContent() {
   }
 
   console.log('Showing main app')
+
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation activeView={activeView} onViewChange={setActiveView} />
       <main className="py-8 px-4 sm:px-6 lg:px-8">
         {activeView === 'dashboard' ? (
           <Dashboard />
-        ) : activeView === 'admin' ? (
+        ) : activeView === 'admin' && isAdmin ? (
           <AdminPanel />
-        ) : null}
+        ) : (
+          <Dashboard />
+        )}
       </main>
     </div>
   )

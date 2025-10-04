@@ -10,6 +10,9 @@ interface NavigationProps {
 export function Navigation({ activeView, onViewChange }: NavigationProps) {
   const { profile, signOut } = useAuth()
 
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
+  const isSuperAdmin = profile?.role === 'super_admin'
+
   const handleSignOut = async () => {
     try {
       await signOut()
@@ -31,7 +34,7 @@ export function Navigation({ activeView, onViewChange }: NavigationProps) {
               </div>
               <span className="ml-3 text-xl font-bold text-gray-900">CreditApp</span>
             </div>
-            
+
             <div className="flex space-x-4">
               <button
                 onClick={() => onViewChange('dashboard')}
@@ -44,18 +47,20 @@ export function Navigation({ activeView, onViewChange }: NavigationProps) {
                 <Home className="w-4 h-4 mr-2" />
                 Dashboard
               </button>
-              
-              <button
-                onClick={() => onViewChange('admin')}
-                className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeView === 'admin'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Admin Panel
-              </button>
+
+              {isAdmin && (
+                <button
+                  onClick={() => onViewChange('admin')}
+                  className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeView === 'admin'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Admin Panel
+                </button>
+              )}
             </div>
           </div>
 
@@ -63,7 +68,7 @@ export function Navigation({ activeView, onViewChange }: NavigationProps) {
             <div className="text-right">
               <p className="text-sm font-medium text-gray-900">{profile?.email}</p>
               <p className="text-xs text-gray-500">
-                {profile?.role === 'admin' ? '👑 Admin' : '👤 User'}
+                {isSuperAdmin ? '⭐ Super Admin' : profile?.role === 'admin' ? '👑 Admin' : '👤 User'}
               </p>
             </div>
             <button
