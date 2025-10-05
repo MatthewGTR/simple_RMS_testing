@@ -4,10 +4,12 @@ import { Auth } from './components/Auth'
 import { Navigation } from './components/Navigation'
 import { Dashboard } from './components/Dashboard'
 import { AdminPanel } from './components/AdminPanel'
+import { AdminDashboard } from './components/AdminDashboard'
+import { EnhancedAdminPanel } from './components/EnhancedAdminPanel'
 
 function AppContent() {
   const { user, profile, loading, error } = useAuth()
-  const [activeView, setActiveView] = useState<'dashboard' | 'admin'>('dashboard')
+  const [activeView, setActiveView] = useState<'dashboard' | 'admin' | 'admin-dashboard' | 'enhanced-admin'>('dashboard')
 
   console.log('=== APP CONTENT RENDER ===')
   console.log('Loading:', loading)
@@ -55,6 +57,10 @@ function AppContent() {
       <main className="py-8 px-4 sm:px-6 lg:px-8">
         {activeView === 'dashboard' ? (
           <Dashboard />
+        ) : activeView === 'admin-dashboard' && isAdmin ? (
+          <AdminDashboard />
+        ) : activeView === 'enhanced-admin' && isAdmin ? (
+          <EnhancedAdminPanel />
         ) : activeView === 'admin' && isAdmin ? (
           <AdminPanel />
         ) : (
