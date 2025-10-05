@@ -32,21 +32,37 @@ export function TransactionHistory({ userId, userEmail, onClose }: TransactionHi
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
+      // Fetch transactions
+      const { data: transactionData, error: fetchError } = await supabase
         .from('transaction_history')
-        .select(`
-          *,
-          performer:performed_by(email)
-        `)
+        .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
-      const formattedData = data?.map(t => ({
+      if (!transactionData || transactionData.length === 0) {
+        setTransactions([]);
+        return;
+      }
+
+      // Get unique performer IDs
+      const performerIds = [...new Set(transactionData.map(t => t.performed_by).filter(Boolean))];
+
+      // Fetch performer profiles
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .in('id', performerIds);
+
+      // Create a map of performer ID to email
+      const performerMap = new Map(profiles?.map(p => [p.id, p.email]) || []);
+
+      // Combine the data
+      const formattedData = transactionData.map(t => ({
         ...t,
-        performer_email: (t.performer as any)?.email || 'System'
-      })) || [];
+        performer_email: t.performed_by ? (performerMap.get(t.performed_by) || 'Unknown') : 'System'
+      }));
 
       setTransactions(formattedData);
     } catch (err: any) {
