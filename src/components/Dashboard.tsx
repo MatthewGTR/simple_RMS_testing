@@ -23,12 +23,47 @@ export function Dashboard() {
       setError('')
       setMessage('')
 
+      const amount = parseInt(useAmount)
+      const reason = useReason || 'Credit usage'
+
       const { data, error: rpcError } = await supabase.rpc('use_credits', {
-        p_amount: parseInt(useAmount),
-        p_reason: useReason || 'Credit usage'
+        p_amount: amount,
+        p_reason: reason
       })
 
       if (rpcError) throw rpcError
+
+      // Send email notification
+      try {
+        const oldCredits = (data as any)?.old_credits || 0
+        const newCredits = (data as any)?.new_credits || 0
+
+        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            to: profile.email,
+            subject: 'Credits Used - Transaction Confirmation',
+            html: `<html><body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+              <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #059669;">Transaction Confirmed</h2>
+                <p>Hello,</p>
+                <p>You have successfully used <strong>${amount} credits</strong>.</p>
+                <div style="background: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                  <p style="margin: 5px 0;"><strong>Amount Used:</strong> ${amount} credits</p>
+                  <p style="margin: 5px 0;"><strong>Reason:</strong> ${reason}</p>
+                  <p style="margin: 5px 0;"><strong>Previous Balance:</strong> ${oldCredits} credits</p>
+                  <p style="margin: 5px 0;"><strong>New Balance:</strong> ${newCredits} credits</p>
+                </div>
+                <p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using CreditApp!</p>
+              </div></body></html>`
+          })
+        })
+      } catch (emailError) {
+        console.error('Failed to send email:', emailError)
+      }
 
       setMessage(`Successfully used ${useAmount} credits. Email notification sent!`)
       setUseAmount('')

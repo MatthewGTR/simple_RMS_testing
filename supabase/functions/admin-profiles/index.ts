@@ -76,6 +76,41 @@ Deno.serve(async (req: Request) => {
           console.error('Error calling admin_update_credits:', error);
           throw error;
         }
+
+        // Send email notification
+        try {
+          const { data: targetUser } = await svc.from('profiles').select('email').eq('id', p_user_id).single();
+          const { data: adminUser } = await svc.from('profiles').select('email').eq('id', user.id).single();
+
+          if (targetUser?.email) {
+            const oldCredits = (data as any)?.old_credits || 0;
+            const newCredits = (data as any)?.new_credits || 0;
+
+            await fetch(`${supabaseUrl}/functions/v1/send-notification-email`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                to: targetUser.email,
+                subject: p_delta > 0 ? 'Credits Added to Your Account' : 'Credits Deducted from Your Account',
+                html: `<html><body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: ${p_delta > 0 ? '#2563eb' : '#dc2626'};">${p_delta > 0 ? 'Credits Added' : 'Credits Deducted'}</h2>
+                    <p>Hello,</p>
+                    <p>Your account has been ${p_delta > 0 ? 'credited with' : 'debited'} <strong>${Math.abs(p_delta)} credits</strong>.</p>
+                    <div style="background: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                      <p style="margin: 5px 0;"><strong>Previous Balance:</strong> ${oldCredits} credits</p>
+                      <p style="margin: 5px 0;"><strong>New Balance:</strong> ${newCredits} credits</p>
+                    </div>
+                    <p style="font-size: 0.9em; color: #666;">Action performed by: ${adminUser?.email || 'Admin'}</p>
+                    <p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using CreditApp!</p>
+                  </div></body></html>`
+              })
+            });
+          }
+        } catch (emailError) {
+          console.error('Failed to send email:', emailError);
+        }
+
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       }
 
@@ -118,6 +153,41 @@ Deno.serve(async (req: Request) => {
           console.error('Error calling admin_update_role:', error);
           throw error;
         }
+
+        // Send email notification
+        try {
+          const { data: targetUser } = await svc.from('profiles').select('email').eq('id', p_user_id).single();
+          const { data: adminUser } = await svc.from('profiles').select('email').eq('id', user.id).single();
+
+          if (targetUser?.email) {
+            const oldRole = (data as any)?.old_role || 'user';
+            const newRole = (data as any)?.new_role || p_new_role;
+
+            await fetch(`${supabaseUrl}/functions/v1/send-notification-email`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                to: targetUser.email,
+                subject: 'Your Role Has Been Updated',
+                html: `<html><body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #2563eb;">Role Updated</h2>
+                    <p>Hello,</p>
+                    <p>Your role in CreditApp has been updated.</p>
+                    <div style="background: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                      <p style="margin: 5px 0;"><strong>Previous Role:</strong> ${oldRole}</p>
+                      <p style="margin: 5px 0;"><strong>New Role:</strong> ${newRole}</p>
+                    </div>
+                    <p style="font-size: 0.9em; color: #666;">Action performed by: ${adminUser?.email || 'Admin'}</p>
+                    <p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using CreditApp!</p>
+                  </div></body></html>`
+              })
+            });
+          }
+        } catch (emailError) {
+          console.error('Failed to send email:', emailError);
+        }
+
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       }
 
