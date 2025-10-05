@@ -1,10 +1,47 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { User, CreditCard, Calendar } from 'lucide-react'
+import { User, CreditCard, Calendar, ShoppingCart } from 'lucide-react'
 import { PingSupabase } from './PingSupabase'
+import { supabase } from '../lib/supabase'
 
 export function Dashboard() {
   const { profile } = useAuth()
+  const [useAmount, setUseAmount] = useState('')
+  const [useReason, setUseReason] = useState('')
+  const [using, setUsing] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  const handleUseCredits = async () => {
+    if (!useAmount || parseInt(useAmount) <= 0) {
+      setError('Please enter a valid amount')
+      return
+    }
+
+    try {
+      setUsing(true)
+      setError('')
+      setMessage('')
+
+      const { data, error: rpcError } = await supabase.rpc('use_credits', {
+        p_amount: parseInt(useAmount),
+        p_reason: useReason || 'Credit usage'
+      })
+
+      if (rpcError) throw rpcError
+
+      setMessage(`Successfully used ${useAmount} credits. Email notification sent!`)
+      setUseAmount('')
+      setUseReason('')
+
+      // Refresh the page to update credits
+      setTimeout(() => window.location.reload(), 1500)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setUsing(false)
+    }
+  }
 
   if (!profile) {
     return (
@@ -64,16 +101,81 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Profile Information</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-gray-600">Email</label>
-            <p className="text-gray-900 mt-1">{profile.email}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Profile Information</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-600">Email</label>
+              <p className="text-gray-900 mt-1">{profile.email}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600">Current Balance</label>
+              <p className="text-gray-900 mt-1">{profile.credits || 0} credits</p>
+            </div>
           </div>
-          <div>
-            <label className="text-sm font-medium text-gray-600">Current Balance</label>
-            <p className="text-gray-900 mt-1">{profile.credits || 0} credits</p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center mb-4">
+            <ShoppingCart className="w-5 h-5 text-green-600 mr-2" />
+            <h2 className="text-xl font-semibold text-gray-900">Use Credits</h2>
+          </div>
+
+          {message && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+              {message}
+            </div>
+          )}
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Amount
+              </label>
+              <input
+                type="number"
+                min="1"
+                max={profile.credits || 0}
+                value={useAmount}
+                onChange={(e) => setUseAmount(e.target.value)}
+                disabled={using}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                placeholder="Enter amount to use"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Reason (optional)
+              </label>
+              <input
+                type="text"
+                value={useReason}
+                onChange={(e) => setUseReason(e.target.value)}
+                disabled={using}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                placeholder="e.g., Purchase, Service fee"
+              />
+            </div>
+
+            <button
+              onClick={handleUseCredits}
+              disabled={using || !useAmount || parseInt(useAmount) <= 0 || parseInt(useAmount) > (profile.credits || 0)}
+              className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
+            >
+              {using ? 'Processing...' : 'Use Credits'}
+            </button>
+
+            <p className="text-xs text-gray-500 text-center">
+              You will receive an email confirmation after using credits
+            </p>
           </div>
         </div>
       </div>
