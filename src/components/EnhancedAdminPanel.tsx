@@ -301,22 +301,51 @@ export function EnhancedAdminPanel() {
       return;
     }
 
+    setUpdating('bulk');
+    setError(null);
     setMessage(`Updating credits for ${selectedUsers.size} users...`);
-    let successCount = 0;
-    let failCount = 0;
 
-    for (const userId of Array.from(selectedUsers)) {
-      try {
-        await updateCredits(userId, delta);
-        successCount++;
-      } catch {
-        failCount++;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No active session');
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-profiles`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'bulk-credits',
+          user_ids: Array.from(selectedUsers),
+          p_delta: delta,
+          p_reason: `Bulk credit ${delta > 0 ? 'addition' : 'deduction'}`
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
-    }
 
-    setMessage(`Bulk update complete: ${successCount} succeeded, ${failCount} failed`);
-    setSelectedUsers(new Set());
-    setShowBulkActions(false);
+      const result = await response.json();
+      const { summary } = result;
+
+      setMessage(`Bulk update complete: ${summary.succeeded} succeeded, ${summary.failed} failed. Email notifications sent.`);
+
+      if (summary.failed > 0) {
+        const failedUsers = result.results.failed.map((f: any) => f.user_id.slice(0, 8)).join(', ');
+        setError(`Some updates failed for users: ${failedUsers}`);
+      }
+
+      setSelectedUsers(new Set());
+      setShowBulkActions(false);
+      await fetchProfiles();
+    } catch (err: any) {
+      setError(`Bulk update failed: ${err.message}`);
+    } finally {
+      setUpdating(null);
+    }
   };
 
   const filteredProfiles = profiles.filter(p => {

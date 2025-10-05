@@ -191,6 +191,90 @@ Deno.serve(async (req: Request) => {
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       }
 
+      if (action === "bulk-credits") {
+        if (!isSuperAdmin) {
+          return Response.json({ error: "Super admin access required" }, { status: 403, headers: corsHeaders });
+        }
+
+        const { user_ids, p_delta, p_reason } = body;
+
+        if (!Array.isArray(user_ids) || user_ids.length === 0) {
+          return Response.json({ error: "user_ids must be a non-empty array" }, { status: 400, headers: corsHeaders });
+        }
+
+        console.log('Bulk credit update:', { count: user_ids.length, p_delta, p_reason });
+
+        const results = {
+          success: [] as string[],
+          failed: [] as { user_id: string; error: string }[]
+        };
+
+        const { data: adminUser } = await svc.from('profiles').select('email').eq('id', user.id).single();
+
+        for (const userId of user_ids) {
+          try {
+            const { data, error } = await userClient.rpc("admin_update_credits", {
+              p_user_id: userId,
+              p_delta,
+              p_reason: p_reason || `Bulk credit ${p_delta > 0 ? 'addition' : 'deduction'}`
+            });
+
+            if (error) {
+              results.failed.push({ user_id: userId, error: error.message });
+              continue;
+            }
+
+            results.success.push(userId);
+
+            // Send email notification
+            try {
+              const { data: targetUser } = await svc.from('profiles').select('email').eq('id', userId).single();
+
+              if (targetUser?.email) {
+                const oldCredits = (data as any)?.old_credits || 0;
+                const newCredits = (data as any)?.new_credits || 0;
+
+                await fetch(`${supabaseUrl}/functions/v1/send-notification-email`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    to: targetUser.email,
+                    subject: p_delta > 0 ? 'Credits Added to Your Account' : 'Credits Deducted from Your Account',
+                    html: `<html><body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                      <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: ${p_delta > 0 ? '#2563eb' : '#dc2626'};">${p_delta > 0 ? 'Credits Added' : 'Credits Deducted'}</h2>
+                        <p>Hello,</p>
+                        <p>Your account has been ${p_delta > 0 ? 'credited with' : 'debited'} <strong>${Math.abs(p_delta)} credits</strong>.</p>
+                        <div style="background: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                          <p style="margin: 5px 0;"><strong>Previous Balance:</strong> ${oldCredits} credits</p>
+                          <p style="margin: 5px 0;"><strong>New Balance:</strong> ${newCredits} credits</p>
+                          <p style="margin: 5px 0;"><strong>Reason:</strong> ${p_reason || `Bulk credit ${p_delta > 0 ? 'addition' : 'deduction'}`}</p>
+                        </div>
+                        <p style="font-size: 0.9em; color: #666;">Action performed by: ${adminUser?.email || 'Admin'}</p>
+                        <p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using CreditApp!</p>
+                      </div></body></html>`
+                  })
+                });
+              }
+            } catch (emailError) {
+              console.error('Failed to send email for user:', userId, emailError);
+            }
+          } catch (err: any) {
+            results.failed.push({ user_id: userId, error: err.message || 'Unknown error' });
+          }
+        }
+
+        return Response.json({
+          ok: true,
+          results,
+          summary: {
+            total: user_ids.length,
+            succeeded: results.success.length,
+            failed: results.failed.length
+          }
+        }, { headers: corsHeaders });
+      }
+
       return Response.json({ error: "Invalid action" }, { status: 400, headers: corsHeaders });
     }
 
