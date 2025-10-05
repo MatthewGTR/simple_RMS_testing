@@ -650,5 +650,3 @@ export function EnhancedAdminPanel() {
     </div>
   );
 }
-
-export { EnhancedAdminPanel }
