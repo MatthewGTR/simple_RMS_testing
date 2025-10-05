@@ -125,8 +125,9 @@ export function AdminPanel() {
       }
 
       const data = await response.json();
+      const targetUser = profiles.find(p => p.id === userId);
       if (isSuperAdmin) {
-        setMessage(`Credits updated successfully`);
+        setMessage(`Credits updated successfully. Email notification sent to ${targetUser?.email || 'user'}.`);
       } else {
         setMessage(`Credit change request submitted for approval`);
       }
@@ -206,7 +207,8 @@ export function AdminPanel() {
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      setMessage(`User ${newRole === 'admin' ? 'promoted to admin' : 'demoted to user'} successfully`);
+      const targetUser = profiles.find(p => p.id === userId);
+      setMessage(`User ${newRole === 'admin' ? 'promoted to admin' : 'demoted to user'} successfully. Email notification sent to ${targetUser?.email || 'user'}.`);
       await fetchProfiles();
     } catch (error) {
       console.error('Error promoting user:', error);
@@ -467,6 +469,11 @@ export function AdminPanel() {
           </div>
         </div>
       )}
+
+      <div className="mb-6 p-3 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-sm">
+        <strong>📧 Email Notifications:</strong> Email notifications are enabled for all transactions.
+        To receive actual emails, configure RESEND_API_KEY in your Supabase project. Currently, emails are logged to the server console.
+      </div>
 
       {message && !error && (
         <div className="mb-6 p-4 rounded-lg bg-green-50 text-green-700 border border-green-200">

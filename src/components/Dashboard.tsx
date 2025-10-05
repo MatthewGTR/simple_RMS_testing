@@ -157,6 +157,11 @@ export function Dashboard() {
             <h2 className="text-xl font-semibold text-gray-900">Use Credits</h2>
           </div>
 
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-xs">
+            <strong>📧 Email Notifications:</strong> You'll receive an email confirmation after using credits.
+            To receive actual emails, ask your admin to configure RESEND_API_KEY.
+          </div>
+
           {message && (
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
               {message}
