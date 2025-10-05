@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import {
   Users, Download, Key, Activity, BarChart3,
-  Shield, RefreshCw, TrendingUp, AlertCircle
+  Shield, RefreshCw, TrendingUp, AlertCircle, TrendingDown,
+  Clock, DollarSign, Zap
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -13,6 +14,21 @@ interface AdminStats {
   activeUsers: number;
 }
 
+interface CreditConsumption {
+  user_id: string;
+  user_email: string;
+  total_consumed: number;
+  last_consumed: string;
+  current_credits: number;
+}
+
+interface CreditActivity {
+  date: string;
+  credits_added: number;
+  credits_consumed: number;
+  net_change: number;
+}
+
 export function AdminDashboard() {
   const { user, profile } = useAuth();
   const [stats, setStats] = useState<AdminStats>({
@@ -21,6 +37,9 @@ export function AdminDashboard() {
     transactionsToday: 0,
     activeUsers: 0
   });
+  const [creditConsumption, setCreditConsumption] = useState<CreditConsumption[]>([]);
+  const [creditActivity, setCreditActivity] = useState<CreditActivity[]>([]);
+  const [totalCreditsConsumed, setTotalCreditsConsumed] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +49,8 @@ export function AdminDashboard() {
   useEffect(() => {
     if (isAdmin) {
       fetchStats();
+      fetchCreditConsumption();
+      fetchCreditActivity();
     }
   }, [isAdmin]);
 
@@ -63,6 +84,100 @@ export function AdminDashboard() {
     }
   };
 
+  const fetchCreditConsumption = async () => {
+    try {
+      const { data: transactions } = await supabase
+        .from('transaction_history')
+        .select(`
+          user_id,
+          action_type,
+          details,
+          created_at,
+          profiles!transaction_history_user_id_fkey(email, credits)
+        `)
+        .in('action_type', ['credit_used', 'credit_deduct'])
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (transactions) {
+        const userConsumption: Record<string, CreditConsumption> = {};
+
+        transactions.forEach((tx: any) => {
+          const userId = tx.user_id;
+          const email = tx.profiles?.email || 'Unknown';
+          const consumed = Math.abs(tx.details?.delta || tx.details?.amount || 1);
+
+          if (!userConsumption[userId]) {
+            userConsumption[userId] = {
+              user_id: userId,
+              user_email: email,
+              total_consumed: 0,
+              last_consumed: tx.created_at,
+              current_credits: tx.profiles?.credits || 0
+            };
+          }
+
+          userConsumption[userId].total_consumed += consumed;
+          if (new Date(tx.created_at) > new Date(userConsumption[userId].last_consumed)) {
+            userConsumption[userId].last_consumed = tx.created_at;
+          }
+        });
+
+        const consumptionArray = Object.values(userConsumption)
+          .sort((a, b) => b.total_consumed - a.total_consumed)
+          .slice(0, 10);
+
+        setCreditConsumption(consumptionArray);
+        setTotalCreditsConsumed(consumptionArray.reduce((sum, c) => sum + c.total_consumed, 0));
+      }
+    } catch (err) {
+      console.error('Error fetching credit consumption:', err);
+    }
+  };
+
+  const fetchCreditActivity = async () => {
+    try {
+      const last7Days = new Date();
+      last7Days.setDate(last7Days.getDate() - 7);
+
+      const { data: transactions } = await supabase
+        .from('transaction_history')
+        .select('action_type, details, created_at')
+        .gte('created_at', last7Days.toISOString())
+        .order('created_at', { ascending: true });
+
+      if (transactions) {
+        const dailyActivity: Record<string, CreditActivity> = {};
+
+        transactions.forEach((tx: any) => {
+          const date = new Date(tx.created_at).toLocaleDateString();
+          if (!dailyActivity[date]) {
+            dailyActivity[date] = {
+              date,
+              credits_added: 0,
+              credits_consumed: 0,
+              net_change: 0
+            };
+          }
+
+          const delta = tx.details?.delta || tx.details?.amount || 0;
+
+          if (tx.action_type === 'credit_add' || delta > 0) {
+            dailyActivity[date].credits_added += Math.abs(delta);
+          } else if (tx.action_type === 'credit_used' || tx.action_type === 'credit_deduct' || delta < 0) {
+            dailyActivity[date].credits_consumed += Math.abs(delta);
+          }
+
+          dailyActivity[date].net_change = dailyActivity[date].credits_added - dailyActivity[date].credits_consumed;
+        });
+
+        setCreditActivity(Object.values(dailyActivity));
+      }
+    } catch (err) {
+      console.error('Error fetching credit activity:', err);
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -83,11 +198,15 @@ export function AdminDashboard() {
             <p className="text-gray-600 mt-1">Property Advertising Management System</p>
           </div>
           <button
-            onClick={fetchStats}
+            onClick={() => {
+              fetchStats();
+              fetchCreditConsumption();
+              fetchCreditActivity();
+            }}
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            Refresh All Data
           </button>
         </div>
       </div>
@@ -208,10 +327,103 @@ export function AdminDashboard() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <Zap className="w-6 h-6 text-orange-600 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Top Credit Consumers</h3>
+            </div>
+            <span className="text-sm text-gray-500">Last 100 transactions</span>
+          </div>
+
+          {creditConsumption.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Zap className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p>No credit consumption data yet</p>
+              <p className="text-sm mt-1">Users will appear here once they start using credits</p>
+            </div>
+          ) : (
+            <>
+              <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">Total Credits Consumed (Top 10)</span>
+                  <span className="text-lg font-bold text-orange-600">{totalCreditsConsumed}</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {creditConsumption.map((item, index) => (
+                  <div key={item.user_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center justify-center w-8 h-8 bg-orange-100 text-orange-600 rounded-full font-semibold text-sm">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{item.user_email}</p>
+                        <p className="text-xs text-gray-500">
+                          Last used: {new Date(item.last_consumed).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-gray-900">{item.total_consumed} credits</p>
+                      <p className="text-xs text-gray-500">{item.current_credits} remaining</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <Activity className="w-6 h-6 text-blue-600 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Credit Activity (7 Days)</h3>
+            </div>
+          </div>
+
+          {creditActivity.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <BarChart3 className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p>No activity data available</p>
+              <p className="text-sm mt-1">Activity will be tracked here over the next 7 days</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {creditActivity.map((activity) => (
+                <div key={activity.date} className="border-l-4 border-blue-500 pl-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium text-gray-900">{activity.date}</p>
+                    <span className={`text-sm font-semibold ${
+                      activity.net_change >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {activity.net_change >= 0 ? '+' : ''}{activity.net_change}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-4 text-xs text-gray-600">
+                    <div className="flex items-center">
+                      <TrendingUp className="w-3 h-3 mr-1 text-green-600" />
+                      <span>Added: {activity.credits_added}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <TrendingDown className="w-3 h-3 mr-1 text-red-600" />
+                      <span>Used: {activity.credits_consumed}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
         <strong>Property Advertising Platform:</strong> This system manages user accounts, listing credits,
-        and transactions for your property advertising business. Use the admin panel to control user access,
-        allocate credits for property listings, and monitor system activity.
+        and transactions for your property advertising business. Monitor credit consumption patterns to identify
+        your most active users and track daily credit flow.
       </div>
     </div>
   );
