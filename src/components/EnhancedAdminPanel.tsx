@@ -16,6 +16,16 @@ interface Profile {
   credits: number;
   created_at: string;
   updated_at: string;
+  user_type?: string | null;
+  country?: string | null;
+  phone?: string | null;
+  ren_number?: string | null;
+  agency_name?: string | null;
+  agency_license?: string | null;
+  years_experience?: number | null;
+  date_of_birth?: string | null;
+  occupation?: string | null;
+  preferred_contact_method?: string | null;
 }
 
 interface Transaction {
@@ -473,6 +483,7 @@ export function EnhancedAdminPanel() {
                   </th>
                 )}
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">User</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Type</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Role</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Credits</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Joined</th>
@@ -496,7 +507,26 @@ export function EnhancedAdminPanel() {
                     <div>
                       <p className="text-sm font-medium text-gray-900">{userProfile.email}</p>
                       <p className="text-xs text-gray-500">{userProfile.id.slice(0, 8)}...</p>
+                      {userProfile.full_name && (
+                        <p className="text-xs text-gray-500 mt-1">{userProfile.full_name}</p>
+                      )}
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    {userProfile.user_type ? (
+                      <div>
+                        <span className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${
+                          userProfile.user_type === 'agent' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {userProfile.user_type === 'agent' ? 'Agent' : 'Consumer'}
+                        </span>
+                        {userProfile.user_type === 'agent' && userProfile.ren_number && (
+                          <p className="text-xs text-gray-500 mt-1">REN: {userProfile.ren_number}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">Not set</span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${
@@ -620,3 +650,6 @@ export function EnhancedAdminPanel() {
     </div>
   );
 }
+
+
+export { EnhancedAdminPanel }

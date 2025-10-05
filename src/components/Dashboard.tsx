@@ -60,26 +60,86 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Profile Information</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-gray-600">Email</label>
-            <p className="text-gray-900 mt-1">{profile.email}</p>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-600">Role</label>
-            <p className="text-gray-900 mt-1 capitalize">{profile.role || 'user'}</p>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-600">Current Balance</label>
-            <p className="text-gray-900 mt-1">{profile.credits || 0} credits</p>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-600">Account Status</label>
-            <p className="text-gray-900 mt-1">Active</p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Profile Information</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-600">Full Name</label>
+              <p className="text-gray-900 mt-1">{profile.full_name || 'Not provided'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600">Email</label>
+              <p className="text-gray-900 mt-1">{profile.email}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600">User Type</label>
+              <p className="text-gray-900 mt-1 capitalize">{profile.user_type || 'Not set'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600">Role</label>
+              <p className="text-gray-900 mt-1 capitalize">{profile.role || 'user'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600">Country</label>
+              <p className="text-gray-900 mt-1">{profile.country || 'Not provided'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600">Phone</label>
+              <p className="text-gray-900 mt-1">{profile.phone || 'Not provided'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600">Current Balance</label>
+              <p className="text-gray-900 mt-1">{profile.credits || 0} credits</p>
+            </div>
           </div>
         </div>
+
+        {profile.user_type === 'agent' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Agent Information</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-600">REN Number</label>
+                <p className="text-gray-900 mt-1">{profile.ren_number || 'Not provided'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-600">Agency Name</label>
+                <p className="text-gray-900 mt-1">{profile.agency_name || 'Not provided'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-600">Agency License</label>
+                <p className="text-gray-900 mt-1">{profile.agency_license || 'Not provided'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-600">Years of Experience</label>
+                <p className="text-gray-900 mt-1">{profile.years_experience ? `${profile.years_experience} years` : 'Not provided'}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {profile.user_type === 'consumer' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Consumer Information</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-600">Date of Birth</label>
+                <p className="text-gray-900 mt-1">
+                  {profile.date_of_birth ? new Date(profile.date_of_birth).toLocaleDateString() : 'Not provided'}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-600">Occupation</label>
+                <p className="text-gray-900 mt-1">{profile.occupation || 'Not provided'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-600">Preferred Contact Method</label>
+                <p className="text-gray-900 mt-1 capitalize">{profile.preferred_contact_method || 'Email'}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
