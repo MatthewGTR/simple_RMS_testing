@@ -4,7 +4,7 @@ import {
   Users, Download, Key, Search, Plus, Minus, Shield,
   RefreshCw, AlertCircle, CheckCircle, XCircle, Mail,
   FileText, BarChart2, Filter, History, ChevronDown, ChevronUp,
-  TrendingUp, Activity, Zap, Clock
+  TrendingUp, Activity, Zap, Clock, X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { exportUsersToCSV, exportTransactionsToCSV } from '../utils/csvExport';
@@ -57,9 +57,9 @@ export function EnhancedAdminPanel() {
   const [showBulkActions, setShowBulkActions] = useState(false);
 
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
-  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [historyModalUserId, setHistoryModalUserId] = useState<string | null>(null);
   const [userTransactions, setUserTransactions] = useState<Record<string, Transaction[]>>({});
-  const [loadingUserHistory, setLoadingUserHistory] = useState<string | null>(null);
+  const [loadingUserHistory, setLoadingUserHistory] = useState<boolean>(false);
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   const isSuperAdmin = profile?.role === 'super_admin';
@@ -129,7 +129,7 @@ export function EnhancedAdminPanel() {
   const fetchUserTransactions = async (userId: string) => {
     if (!isAdmin) return;
 
-    setLoadingUserHistory(userId);
+    setLoadingUserHistory(true);
     try {
       const { data: txData, error } = await supabase
         .from('transaction_history')
@@ -161,19 +161,17 @@ export function EnhancedAdminPanel() {
       console.error('Error fetching user transactions:', err);
       setError('Failed to load user transaction history');
     } finally {
-      setLoadingUserHistory(null);
+      setLoadingUserHistory(false);
     }
   };
 
-  const toggleUserHistory = async (userId: string) => {
-    if (expandedUserId === userId) {
-      setExpandedUserId(null);
-    } else {
-      setExpandedUserId(userId);
-      if (!userTransactions[userId]) {
-        await fetchUserTransactions(userId);
-      }
-    }
+  const openHistoryModal = async (userId: string) => {
+    setHistoryModalUserId(userId);
+    await fetchUserTransactions(userId);
+  };
+
+  const closeHistoryModal = () => {
+    setHistoryModalUserId(null);
   };
 
   const updateCredits = async (userId: string, delta: number) => {
@@ -215,7 +213,7 @@ export function EnhancedAdminPanel() {
 
       await fetchProfiles();
       if (isSuperAdmin) await fetchTransactions();
-      if (expandedUserId === userId) {
+      if (historyModalUserId === userId) {
         await fetchUserTransactions(userId);
       }
     } catch (err: any) {
@@ -261,7 +259,7 @@ export function EnhancedAdminPanel() {
       setMessage(`Password reset successfully for ${targetUser?.email}. Email notification sent.`);
       setResetPasswordUserId(null);
       setNewPassword('');
-      if (expandedUserId === userId) {
+      if (historyModalUserId === userId) {
         await fetchUserTransactions(userId);
       }
     } catch (err: any) {
@@ -307,7 +305,7 @@ export function EnhancedAdminPanel() {
       setMessage(`User ${newRole === 'admin' ? 'promoted to admin' : 'demoted to user'} successfully. Email sent to ${targetUser?.email}.`);
       await fetchProfiles();
       if (isSuperAdmin) await fetchTransactions();
-      if (expandedUserId === userId) {
+      if (historyModalUserId === userId) {
         await fetchUserTransactions(userId);
       }
     } catch (err: any) {
@@ -763,126 +761,15 @@ export function EnhancedAdminPanel() {
                             </button>
                           )}
                           <button
-                            onClick={() => toggleUserHistory(userProfile.id)}
-                            disabled={loadingUserHistory === userProfile.id}
-                            className="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 text-xs font-semibold transition-all border border-gray-200"
+                            onClick={() => openHistoryModal(userProfile.id)}
+                            className="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-xs font-semibold transition-all border border-gray-200"
                           >
                             <History className="w-3.5 h-3.5 mr-1" />
                             History
-                            {expandedUserId === userProfile.id ? (
-                              <ChevronUp className="w-3.5 h-3.5 ml-1" />
-                            ) : (
-                              <ChevronDown className="w-3.5 h-3.5 ml-1" />
-                            )}
                           </button>
                         </div>
                       </td>
                     </tr>
-
-                    {/* Expanded Transaction History */}
-                    {expandedUserId === userProfile.id && (
-                      <tr>
-                        <td colSpan={showBulkActions ? 7 : 6} className="px-6 py-6 bg-gradient-to-br from-slate-50 to-blue-50">
-                          <div className="bg-white border-2 border-blue-200 rounded-2xl p-6 shadow-sm">
-                            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                              <History className="w-5 h-5 mr-2 text-blue-600" />
-                              Transaction History: {userProfile.email}
-                            </h3>
-
-                            {loadingUserHistory === userProfile.id ? (
-                              <div className="text-center py-12">
-                                <RefreshCw className="w-8 h-8 animate-spin mx-auto text-blue-500 mb-3" />
-                                <p className="text-sm text-gray-600">Loading transaction history...</p>
-                              </div>
-                            ) : userTransactions[userProfile.id] && userTransactions[userProfile.id].length > 0 ? (
-                              <div className="space-y-3 max-h-96 overflow-y-auto">
-                                {userTransactions[userProfile.id].map((tx) => (
-                                  <div
-                                    key={tx.id}
-                                    className="flex items-start gap-4 p-4 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-sm transition-all"
-                                  >
-                                    <div className={`p-2.5 rounded-lg ${
-                                      tx.action_type === 'credit_add' ? 'bg-green-100' :
-                                      tx.action_type === 'credit_deduct' ? 'bg-red-100' :
-                                      tx.action_type === 'role_change' ? 'bg-blue-100' :
-                                      tx.action_type === 'password_reset' ? 'bg-yellow-100' :
-                                      'bg-gray-100'
-                                    }`}>
-                                      {tx.action_type === 'credit_add' && <Plus className="w-5 h-5 text-green-600" />}
-                                      {tx.action_type === 'credit_deduct' && <Minus className="w-5 h-5 text-red-600" />}
-                                      {tx.action_type === 'role_change' && <Shield className="w-5 h-5 text-blue-600" />}
-                                      {tx.action_type === 'password_reset' && <Key className="w-5 h-5 text-yellow-600" />}
-                                      {tx.action_type === 'credit_used' && <Zap className="w-5 h-5 text-orange-600" />}
-                                    </div>
-
-                                    <div className="flex-1">
-                                      <div className="flex items-center justify-between mb-1">
-                                        <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-lg ${
-                                          tx.action_type === 'credit_add' ? 'bg-green-100 text-green-700' :
-                                          tx.action_type === 'credit_deduct' ? 'bg-red-100 text-red-700' :
-                                          tx.action_type === 'role_change' ? 'bg-blue-100 text-blue-700' :
-                                          tx.action_type === 'password_reset' ? 'bg-yellow-100 text-yellow-700' :
-                                          'bg-gray-100 text-gray-700'
-                                        }`}>
-                                          {tx.action_type === 'credit_add' ? 'Credits Added' :
-                                           tx.action_type === 'credit_deduct' ? 'Credits Deducted' :
-                                           tx.action_type === 'role_change' ? 'Role Changed' :
-                                           tx.action_type === 'password_reset' ? 'Password Reset' :
-                                           tx.action_type === 'credit_used' ? 'Credits Used' :
-                                           tx.action_type}
-                                        </span>
-                                        <span className="text-xs text-gray-500 flex items-center">
-                                          <Clock className="w-3 h-3 mr-1" />
-                                          {new Date(tx.created_at).toLocaleString()}
-                                        </span>
-                                      </div>
-
-                                      {tx.action_type === 'role_change' && tx.details && (
-                                        <p className="text-sm text-gray-700 font-medium">
-                                          {tx.details.old_role} → {tx.details.new_role}
-                                        </p>
-                                      )}
-
-                                      {(tx.action_type === 'credit_add' || tx.action_type === 'credit_deduct') && tx.details && (
-                                        <div>
-                                          <p className={`text-sm font-bold ${tx.details.delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                            {tx.details.delta > 0 ? '+' : ''}{tx.details.delta} credits
-                                          </p>
-                                          {tx.details.old_credits !== undefined && (
-                                            <p className="text-xs text-gray-500 mt-1">
-                                              Balance: {tx.details.old_credits} → {tx.details.new_credits}
-                                            </p>
-                                          )}
-                                          {tx.details.reason && (
-                                            <p className="text-xs text-gray-600 mt-1 italic">{tx.details.reason}</p>
-                                          )}
-                                        </div>
-                                      )}
-
-                                      {tx.action_type === 'credit_used' && tx.details && (
-                                        <p className="text-sm font-bold text-orange-600">
-                                          -{Math.abs(tx.details.delta || tx.details.amount || 0)} credits
-                                        </p>
-                                      )}
-
-                                      <p className="text-xs text-gray-500 mt-2">
-                                        By: <span className="font-medium text-gray-700">{tx.performer_email}</span>
-                                      </p>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="text-center py-12">
-                                <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                                <p className="text-gray-600 font-medium">No transaction history</p>
-                                <p className="text-sm text-gray-500 mt-1">Transactions will appear here once actions are performed</p>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
                   </React.Fragment>
                 ))}
               </tbody>
@@ -901,6 +788,201 @@ export function EnhancedAdminPanel() {
             </div>
           )}
         </div>
+
+        {/* Transaction History Modal */}
+        {historyModalUserId && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white bg-opacity-20 rounded-lg">
+                    <History className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Transaction History</h2>
+                    <p className="text-blue-100 text-sm">
+                      {profiles.find(p => p.id === historyModalUserId)?.email}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={closeHistoryModal}
+                  className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6 text-white" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+                {loadingUserHistory ? (
+                  <div className="text-center py-16">
+                    <RefreshCw className="w-12 h-12 animate-spin mx-auto text-blue-500 mb-4" />
+                    <p className="text-gray-600 font-medium">Loading transaction history...</p>
+                  </div>
+                ) : userTransactions[historyModalUserId] && userTransactions[historyModalUserId].length > 0 ? (
+                  <div className="space-y-4">
+                    {userTransactions[historyModalUserId].map((tx) => {
+                      const getActionIcon = () => {
+                        switch (tx.action_type) {
+                          case 'credit_add': return <Plus className="w-6 h-6 text-green-600" />;
+                          case 'credit_deduct': return <Minus className="w-6 h-6 text-red-600" />;
+                          case 'role_change': return <Shield className="w-6 h-6 text-blue-600" />;
+                          case 'password_reset': return <Key className="w-6 h-6 text-yellow-600" />;
+                          case 'credit_used': return <Zap className="w-6 h-6 text-orange-600" />;
+                          default: return <Activity className="w-6 h-6 text-gray-600" />;
+                        }
+                      };
+
+                      const getActionColor = () => {
+                        switch (tx.action_type) {
+                          case 'credit_add': return 'bg-green-100 border-green-200';
+                          case 'credit_deduct': return 'bg-red-100 border-red-200';
+                          case 'role_change': return 'bg-blue-100 border-blue-200';
+                          case 'password_reset': return 'bg-yellow-100 border-yellow-200';
+                          case 'credit_used': return 'bg-orange-100 border-orange-200';
+                          default: return 'bg-gray-100 border-gray-200';
+                        }
+                      };
+
+                      const getActionLabel = () => {
+                        switch (tx.action_type) {
+                          case 'credit_add': return 'Credits Added';
+                          case 'credit_deduct': return 'Credits Deducted';
+                          case 'role_change': return 'Role Changed';
+                          case 'password_reset': return 'Password Reset';
+                          case 'credit_used': return 'Credits Used';
+                          case 'credit_request_approved': return 'Credit Request Approved';
+                          case 'credit_request_rejected': return 'Credit Request Rejected';
+                          default: return tx.action_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        }
+                      };
+
+                      const getBadgeColor = () => {
+                        switch (tx.action_type) {
+                          case 'credit_add': return 'bg-green-100 text-green-700';
+                          case 'credit_deduct': return 'bg-red-100 text-red-700';
+                          case 'role_change': return 'bg-blue-100 text-blue-700';
+                          case 'password_reset': return 'bg-yellow-100 text-yellow-700';
+                          case 'credit_used': return 'bg-orange-100 text-orange-700';
+                          default: return 'bg-gray-100 text-gray-700';
+                        }
+                      };
+
+                      return (
+                        <div
+                          key={tx.id}
+                          className={`border-2 rounded-xl p-5 hover:shadow-md transition-all ${getActionColor()}`}
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className="p-3 bg-white rounded-xl shadow-sm">
+                              {getActionIcon()}
+                            </div>
+
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className={`inline-flex px-3 py-1.5 text-sm font-bold rounded-lg ${getBadgeColor()}`}>
+                                  {getActionLabel()}
+                                </span>
+                                <span className="text-sm text-gray-600 flex items-center">
+                                  <Clock className="w-4 h-4 mr-1.5" />
+                                  {new Date(tx.created_at).toLocaleString()}
+                                </span>
+                              </div>
+
+                              {/* Role Change Details */}
+                              {tx.action_type === 'role_change' && tx.details && (
+                                <div className="bg-white rounded-lg p-3 mb-3">
+                                  <p className="text-sm text-gray-700 font-semibold mb-1">Role Update:</p>
+                                  <p className="text-base font-bold text-gray-900">
+                                    <span className="text-blue-600">{tx.details.old_role}</span>
+                                    {' → '}
+                                    <span className="text-green-600">{tx.details.new_role}</span>
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Credit Add/Deduct Details */}
+                              {(tx.action_type === 'credit_add' || tx.action_type === 'credit_deduct') && tx.details && (
+                                <div className="bg-white rounded-lg p-3 mb-3">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className={`text-lg font-bold ${tx.details.delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {tx.details.delta > 0 ? '+' : ''}{tx.details.delta} credits
+                                    </p>
+                                  </div>
+                                  {tx.details.old_credits !== undefined && (
+                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                      <span>Balance:</span>
+                                      <span className="font-semibold">{tx.details.old_credits}</span>
+                                      <span>→</span>
+                                      <span className="font-semibold text-blue-600">{tx.details.new_credits}</span>
+                                    </div>
+                                  )}
+                                  {tx.details.reason && (
+                                    <p className="text-sm text-gray-600 mt-2 italic border-t border-gray-200 pt-2">
+                                      <strong>Reason:</strong> {tx.details.reason}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Credit Used Details */}
+                              {tx.action_type === 'credit_used' && tx.details && (
+                                <div className="bg-white rounded-lg p-3 mb-3">
+                                  <p className="text-lg font-bold text-orange-600">
+                                    -{Math.abs(tx.details.delta || tx.details.amount || 0)} credits used
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Password Reset */}
+                              {tx.action_type === 'password_reset' && (
+                                <div className="bg-white rounded-lg p-3 mb-3">
+                                  <p className="text-sm text-gray-700">
+                                    User password was reset by an administrator
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Credit Request Approved/Rejected */}
+                              {(tx.action_type === 'credit_request_approved' || tx.action_type === 'credit_request_rejected') && tx.details && (
+                                <div className="bg-white rounded-lg p-3 mb-3">
+                                  <p className="text-sm text-gray-700">
+                                    Request #{tx.details.request_id}: {tx.details.delta} credits
+                                  </p>
+                                  {tx.details.notes && (
+                                    <p className="text-xs text-gray-600 mt-1 italic">{tx.details.notes}</p>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Performer Info */}
+                              <div className="flex items-center gap-2 text-sm text-gray-600 bg-white rounded-lg px-3 py-2">
+                                <span className="font-medium">Performed by:</span>
+                                <span className="font-bold text-gray-900">{tx.performer_email}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-16">
+                    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FileText className="w-12 h-12 text-gray-300" />
+                    </div>
+                    <p className="text-gray-600 font-semibold text-lg mb-2">No Transaction History</p>
+                    <p className="text-gray-500">
+                      Transactions will appear here once actions are performed on this account
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
