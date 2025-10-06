@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import {
   Users, Download, Key, Search, Plus, Minus, Shield,
   RefreshCw, AlertCircle, CheckCircle, XCircle, Mail,
-  FileText, BarChart2, Filter
+  FileText, BarChart2, Filter, History, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { exportUsersToCSV, exportTransactionsToCSV } from '../utils/csvExport';
@@ -56,6 +56,9 @@ export function EnhancedAdminPanel() {
   const [showBulkActions, setShowBulkActions] = useState(false);
 
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [userTransactions, setUserTransactions] = useState<Record<string, Transaction[]>>({});
+  const [loadingUserHistory, setLoadingUserHistory] = useState<string | null>(null);
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   const isSuperAdmin = profile?.role === 'super_admin';
@@ -122,6 +125,56 @@ export function EnhancedAdminPanel() {
     }
   };
 
+  const fetchUserTransactions = async (userId: string) => {
+    if (!isAdmin) return;
+
+    setLoadingUserHistory(userId);
+    try {
+      const { data: txData, error } = await supabase
+        .from('transaction_history')
+        .select(`
+          id,
+          user_id,
+          action_type,
+          details,
+          created_at,
+          performed_by,
+          performer:profiles!transaction_history_performed_by_fkey(email)
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formatted = (txData || []).map((t: any) => ({
+        id: t.id,
+        user_id: t.user_id,
+        action_type: t.action_type,
+        details: t.details,
+        created_at: t.created_at,
+        performer_email: t.performer?.email || 'System'
+      }));
+
+      setUserTransactions(prev => ({ ...prev, [userId]: formatted }));
+    } catch (err) {
+      console.error('Error fetching user transactions:', err);
+      setError('Failed to load user transaction history');
+    } finally {
+      setLoadingUserHistory(null);
+    }
+  };
+
+  const toggleUserHistory = async (userId: string) => {
+    if (expandedUserId === userId) {
+      setExpandedUserId(null);
+    } else {
+      setExpandedUserId(userId);
+      if (!userTransactions[userId]) {
+        await fetchUserTransactions(userId);
+      }
+    }
+  };
+
   const updateCredits = async (userId: string, delta: number) => {
     setUpdating(userId);
     setError(null);
@@ -161,6 +214,9 @@ export function EnhancedAdminPanel() {
 
       await fetchProfiles();
       if (isSuperAdmin) await fetchTransactions();
+      if (expandedUserId === userId) {
+        await fetchUserTransactions(userId);
+      }
     } catch (err: any) {
       setError(`Failed to update credits: ${err.message}`);
     } finally {
@@ -204,6 +260,9 @@ export function EnhancedAdminPanel() {
       setMessage(`Password reset successfully for ${targetUser?.email}. Email notification sent.`);
       setResetPasswordUserId(null);
       setNewPassword('');
+      if (expandedUserId === userId) {
+        await fetchUserTransactions(userId);
+      }
     } catch (err: any) {
       setError(`Failed to reset password: ${err.message}`);
     } finally {
@@ -247,6 +306,9 @@ export function EnhancedAdminPanel() {
       setMessage(`User ${newRole === 'admin' ? 'promoted to admin' : 'demoted to user'} successfully. Email sent to ${targetUser?.email}.`);
       await fetchProfiles();
       if (isSuperAdmin) await fetchTransactions();
+      if (expandedUserId === userId) {
+        await fetchUserTransactions(userId);
+      }
     } catch (err: any) {
       setError(`Failed to update role: ${err.message}`);
     } finally {
@@ -522,7 +584,8 @@ export function EnhancedAdminPanel() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredProfiles.map((userProfile) => (
-                <tr key={userProfile.id} className="hover:bg-gray-50 transition-colors">
+                <React.Fragment key={userProfile.id}>
+                <tr className="hover:bg-gray-50 transition-colors">
                   {showBulkActions && (
                     <td className="px-4 py-4">
                       <input
@@ -612,6 +675,20 @@ export function EnhancedAdminPanel() {
                             {userProfile.role === 'admin' ? 'Demote' : 'Promote'}
                           </button>
                         )}
+                        <button
+                          onClick={() => toggleUserHistory(userProfile.id)}
+                          disabled={loadingUserHistory === userProfile.id}
+                          className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 text-xs"
+                          title="View Transaction History"
+                        >
+                          <History className="w-3 h-3 mr-1" />
+                          History
+                          {expandedUserId === userProfile.id ? (
+                            <ChevronUp className="w-3 h-3 ml-1" />
+                          ) : (
+                            <ChevronDown className="w-3 h-3 ml-1" />
+                          )}
+                        </button>
                       </div>
 
                       {resetPasswordUserId === userProfile.id && (
@@ -659,6 +736,115 @@ export function EnhancedAdminPanel() {
                     </div>
                   </td>
                 </tr>
+
+                {expandedUserId === userProfile.id && (
+                  <tr>
+                    <td colSpan={showBulkActions ? 7 : 6} className="px-6 py-4 bg-gray-50">
+                      <div className="border border-gray-200 rounded-lg bg-white p-4">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                          <History className="w-5 h-5 mr-2 text-gray-600" />
+                          Transaction History for {userProfile.email}
+                        </h3>
+
+                        {loadingUserHistory === userProfile.id ? (
+                          <div className="text-center py-8">
+                            <RefreshCw className="w-6 h-6 animate-spin mx-auto text-gray-400" />
+                            <p className="text-sm text-gray-500 mt-2">Loading transaction history...</p>
+                          </div>
+                        ) : userTransactions[userProfile.id] && userTransactions[userProfile.id].length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Date</th>
+                                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Action</th>
+                                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Details</th>
+                                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Performed By</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-200">
+                                {userTransactions[userProfile.id].map((tx) => {
+                                  const actionColors = {
+                                    credit_add: 'bg-green-100 text-green-700',
+                                    credit_deduct: 'bg-red-100 text-red-700',
+                                    credit_used: 'bg-orange-100 text-orange-700',
+                                    role_change: 'bg-blue-100 text-blue-700',
+                                    password_reset: 'bg-yellow-100 text-yellow-700'
+                                  };
+
+                                  const actionLabels = {
+                                    credit_add: 'Credits Added',
+                                    credit_deduct: 'Credits Deducted',
+                                    credit_used: 'Credits Used',
+                                    role_change: 'Role Changed',
+                                    password_reset: 'Password Reset'
+                                  };
+
+                                  return (
+                                    <tr key={tx.id} className="hover:bg-gray-50">
+                                      <td className="px-4 py-3 text-xs text-gray-600">
+                                        {new Date(tx.created_at).toLocaleString()}
+                                      </td>
+                                      <td className="px-4 py-3">
+                                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                                          actionColors[tx.action_type as keyof typeof actionColors] || 'bg-gray-100 text-gray-700'
+                                        }`}>
+                                          {actionLabels[tx.action_type as keyof typeof actionLabels] || tx.action_type}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-3 text-xs text-gray-600">
+                                        {tx.action_type === 'role_change' && tx.details && (
+                                          <span className="font-medium">
+                                            {tx.details.old_role} → {tx.details.new_role}
+                                          </span>
+                                        )}
+                                        {(tx.action_type === 'credit_add' || tx.action_type === 'credit_deduct') && tx.details && (
+                                          <div>
+                                            <span className={`font-medium ${tx.details.delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                              {tx.details.delta > 0 ? '+' : ''}{tx.details.delta} credits
+                                            </span>
+                                            {tx.details.old_credits !== undefined && (
+                                              <div className="text-xs text-gray-500">
+                                                Balance: {tx.details.old_credits} → {tx.details.new_credits}
+                                              </div>
+                                            )}
+                                            {tx.details.reason && (
+                                              <div className="text-xs text-gray-500 mt-1">
+                                                Reason: {tx.details.reason}
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                        {tx.action_type === 'credit_used' && tx.details && (
+                                          <span className="font-medium text-orange-600">
+                                            -{Math.abs(tx.details.delta || tx.details.amount || 0)} credits used
+                                          </span>
+                                        )}
+                                        {tx.action_type === 'password_reset' && (
+                                          <span className="text-gray-600">Password was reset</span>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-3 text-xs text-gray-600">
+                                        {tx.performer_email}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                            <p>No transaction history found for this user</p>
+                            <p className="text-xs mt-1">Transactions will appear here once actions are performed</p>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
