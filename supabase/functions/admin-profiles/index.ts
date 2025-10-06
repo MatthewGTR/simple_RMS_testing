@@ -56,6 +56,41 @@ Deno.serve(async (req: Request) => {
       const body = await req.json();
       const action = body.action;
 
+      if (action === "get-transactions") {
+        if (!isSuperAdmin) {
+          return Response.json({ error: "Super admin access required" }, { status: 403, headers: corsHeaders });
+        }
+
+        const { data: transactions, error } = await svc
+          .from('transaction_history')
+          .select(`
+            id,
+            user_id,
+            action_type,
+            details,
+            created_at,
+            performed_by,
+            user:profiles!transaction_history_user_id_fkey(email),
+            performer:profiles!transaction_history_performed_by_fkey(email)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(500);
+
+        if (error) throw error;
+
+        const formatted = (transactions || []).map((t: any) => ({
+          id: t.id,
+          user_id: t.user_id,
+          action_type: t.action_type,
+          details: t.details,
+          created_at: t.created_at,
+          user_email: t.user?.email || 'Unknown',
+          performer_email: t.performer?.email || 'System'
+        }));
+
+        return Response.json(formatted, { headers: corsHeaders });
+      }
+
       if (action === "list-pending") {
         if (!isSuperAdmin) {
           return Response.json({ error: "Super admin access required" }, { status: 403, headers: corsHeaders });

@@ -246,6 +246,7 @@ export function EnhancedAdminPanel() {
       const targetUser = profiles.find(p => p.id === userId);
       setMessage(`User ${newRole === 'admin' ? 'promoted to admin' : 'demoted to user'} successfully. Email sent to ${targetUser?.email}.`);
       await fetchProfiles();
+      if (isSuperAdmin) await fetchTransactions();
     } catch (err: any) {
       setError(`Failed to update role: ${err.message}`);
     } finally {
@@ -669,6 +670,100 @@ export function EnhancedAdminPanel() {
           {searchQuery || filterRole !== 'all'
             ? 'No users match your filters'
             : 'No users found. Try refreshing.'}
+        </div>
+      )}
+
+      {isSuperAdmin && transactions.length > 0 && (
+        <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900">Transaction History</h2>
+            <p className="text-sm text-gray-600 mt-1">Complete audit log of all admin actions</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Date</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Action</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">User</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Details</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Performed By</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {transactions.map((tx) => {
+                  const actionColors = {
+                    credit_add: 'bg-green-100 text-green-700',
+                    credit_deduct: 'bg-red-100 text-red-700',
+                    credit_used: 'bg-orange-100 text-orange-700',
+                    role_change: 'bg-blue-100 text-blue-700',
+                    password_reset: 'bg-yellow-100 text-yellow-700',
+                    credit_request_approved: 'bg-green-100 text-green-700',
+                    credit_request_rejected: 'bg-red-100 text-red-700'
+                  };
+
+                  const actionLabels = {
+                    credit_add: 'Credits Added',
+                    credit_deduct: 'Credits Deducted',
+                    credit_used: 'Credits Used',
+                    role_change: 'Role Changed',
+                    password_reset: 'Password Reset',
+                    credit_request_approved: 'Credit Request Approved',
+                    credit_request_rejected: 'Credit Request Rejected'
+                  };
+
+                  return (
+                    <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {new Date(tx.created_at).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${
+                          actionColors[tx.action_type as keyof typeof actionColors] || 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {actionLabels[tx.action_type as keyof typeof actionLabels] || tx.action_type}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {tx.user_email}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {tx.action_type === 'role_change' && tx.details && (
+                          <span>
+                            {tx.details.old_role} → {tx.details.new_role}
+                          </span>
+                        )}
+                        {(tx.action_type === 'credit_add' || tx.action_type === 'credit_deduct') && tx.details && (
+                          <span>
+                            {tx.details.delta > 0 ? '+' : ''}{tx.details.delta} credits
+                            {tx.details.old_credits !== undefined && (
+                              <span className="text-xs text-gray-500 ml-2">
+                                ({tx.details.old_credits} → {tx.details.new_credits})
+                              </span>
+                            )}
+                          </span>
+                        )}
+                        {tx.action_type === 'credit_used' && tx.details && (
+                          <span>-{Math.abs(tx.details.delta || tx.details.amount || 0)} credits</span>
+                        )}
+                        {tx.action_type === 'password_reset' && (
+                          <span>Password reset</span>
+                        )}
+                        {(tx.action_type === 'credit_request_approved' || tx.action_type === 'credit_request_rejected') && tx.details && (
+                          <span>
+                            Request #{tx.details.request_id}: {tx.details.delta} credits
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {tx.performer_email}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
