@@ -6,6 +6,7 @@ import {
   Clock, DollarSign, Zap
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { exportToCSV } from '../utils/csvExport';
 
 interface AdminStats {
   totalUsers: number;
@@ -29,7 +30,11 @@ interface CreditActivity {
   net_change: number;
 }
 
-export function AdminDashboard() {
+interface AdminDashboardProps {
+  onNavigate?: (view: 'dashboard' | 'admin-dashboard' | 'enhanced-admin') => void;
+}
+
+export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   const { user, profile } = useAuth();
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
@@ -42,6 +47,8 @@ export function AdminDashboard() {
   const [totalCreditsConsumed, setTotalCreditsConsumed] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<'dashboard' | 'user-management'>('dashboard');
 
   const isSuperAdmin = profile?.role === 'super_admin';
   const isAdmin = profile?.role === 'admin' || isSuperAdmin;
@@ -178,6 +185,98 @@ export function AdminDashboard() {
     }
   };
 
+  const handleExportUsers = async () => {
+    try {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, email, role, credits, user_type, created_at')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (!profiles || profiles.length === 0) {
+        setError('No users to export');
+        return;
+      }
+
+      const csvData = profiles.map(p => ({
+        'User ID': p.id,
+        'Email': p.email,
+        'Role': p.role,
+        'Credits': p.credits,
+        'User Type': p.user_type || 'consumer',
+        'Created At': new Date(p.created_at).toLocaleString()
+      }));
+
+      exportToCSV(csvData, `users-export-${new Date().toISOString().split('T')[0]}.csv`);
+      setSuccessMessage('Users exported successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      setError(`Export failed: ${err.message}`);
+    }
+  };
+
+  const handleExportTransactions = async () => {
+    try {
+      const { data: transactions, error } = await supabase
+        .from('transaction_history')
+        .select(`
+          id,
+          user_id,
+          action_type,
+          details,
+          created_at,
+          profiles!transaction_history_user_id_fkey(email)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(1000);
+
+      if (error) throw error;
+
+      if (!transactions || transactions.length === 0) {
+        setError('No transactions to export');
+        return;
+      }
+
+      const csvData = transactions.map((t: any) => ({
+        'Transaction ID': t.id,
+        'User Email': t.profiles?.email || 'Unknown',
+        'Action Type': t.action_type,
+        'Amount': t.details?.delta || t.details?.amount || 0,
+        'Reason': t.details?.reason || '',
+        'Date': new Date(t.created_at).toLocaleString()
+      }));
+
+      exportToCSV(csvData, `transactions-export-${new Date().toISOString().split('T')[0]}.csv`);
+      setSuccessMessage('Transactions exported successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      setError(`Export failed: ${err.message}`);
+    }
+  };
+
+  const handleExportCreditActivity = async () => {
+    try {
+      if (creditActivity.length === 0) {
+        setError('No credit activity to export');
+        return;
+      }
+
+      const csvData = creditActivity.map(a => ({
+        'Date': a.date,
+        'Credits Added': a.credits_added,
+        'Credits Consumed': a.credits_consumed,
+        'Net Change': a.net_change
+      }));
+
+      exportToCSV(csvData, `credit-activity-${new Date().toISOString().split('T')[0]}.csv`);
+      setSuccessMessage('Credit activity exported successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      setError(`Export failed: ${err.message}`);
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -215,6 +314,13 @@ export function AdminDashboard() {
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
           <AlertCircle className="w-5 h-5 inline mr-2" />
           {error}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+          <AlertCircle className="w-5 h-5 inline mr-2" />
+          {successMessage}
         </div>
       )}
 
@@ -290,15 +396,26 @@ export function AdminDashboard() {
             <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
           </div>
           <div className="space-y-3">
-            <button className="w-full text-left px-4 py-3 bg-white rounded-lg hover:bg-blue-50 transition-colors border border-gray-200">
+            <button
+              onClick={() => onNavigate?.('enhanced-admin')}
+              className="w-full text-left px-4 py-3 bg-white rounded-lg hover:bg-blue-50 transition-colors border border-gray-200"
+            >
               <span className="font-medium text-gray-900">User Management</span>
               <p className="text-sm text-gray-600">Manage users, roles, and permissions</p>
             </button>
-            <button className="w-full text-left px-4 py-3 bg-white rounded-lg hover:bg-blue-50 transition-colors border border-gray-200">
+            <button
+              onClick={() => onNavigate?.('enhanced-admin')}
+              className="w-full text-left px-4 py-3 bg-white rounded-lg hover:bg-blue-50 transition-colors border border-gray-200"
+            >
               <span className="font-medium text-gray-900">Credit Management</span>
               <p className="text-sm text-gray-600">Allocate and track listing credits</p>
             </button>
-            <button className="w-full text-left px-4 py-3 bg-white rounded-lg hover:bg-blue-50 transition-colors border border-gray-200">
+            <button
+              onClick={() => {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+              }}
+              className="w-full text-left px-4 py-3 bg-white rounded-lg hover:bg-blue-50 transition-colors border border-gray-200"
+            >
               <span className="font-medium text-gray-900">Reports & Analytics</span>
               <p className="text-sm text-gray-600">View usage reports and export data</p>
             </button>
@@ -311,17 +428,26 @@ export function AdminDashboard() {
             <h3 className="text-lg font-semibold text-gray-900">Export Options</h3>
           </div>
           <div className="space-y-3">
-            <button className="w-full text-left px-4 py-3 bg-white rounded-lg hover:bg-green-50 transition-colors border border-gray-200">
+            <button
+              onClick={handleExportUsers}
+              className="w-full text-left px-4 py-3 bg-white rounded-lg hover:bg-green-50 transition-colors border border-gray-200"
+            >
               <span className="font-medium text-gray-900">Export Users</span>
               <p className="text-sm text-gray-600">Download user list as CSV</p>
             </button>
-            <button className="w-full text-left px-4 py-3 bg-white rounded-lg hover:bg-green-50 transition-colors border border-gray-200">
+            <button
+              onClick={handleExportTransactions}
+              className="w-full text-left px-4 py-3 bg-white rounded-lg hover:bg-green-50 transition-colors border border-gray-200"
+            >
               <span className="font-medium text-gray-900">Export Transactions</span>
               <p className="text-sm text-gray-600">Download transaction history</p>
             </button>
-            <button className="w-full text-left px-4 py-3 bg-white rounded-lg hover:bg-green-50 transition-colors border border-gray-200">
-              <span className="font-medium text-gray-900">Export Property Listings</span>
-              <p className="text-sm text-gray-600">Download all property data</p>
+            <button
+              onClick={handleExportCreditActivity}
+              className="w-full text-left px-4 py-3 bg-white rounded-lg hover:bg-green-50 transition-colors border border-gray-200"
+            >
+              <span className="font-medium text-gray-900">Export Credit Activity</span>
+              <p className="text-sm text-gray-600">Download 7-day credit activity report</p>
             </button>
           </div>
         </div>

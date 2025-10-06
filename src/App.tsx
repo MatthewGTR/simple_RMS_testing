@@ -57,7 +57,7 @@ function AppContent() {
         {activeView === 'dashboard' ? (
           <Dashboard />
         ) : activeView === 'admin-dashboard' && isAdmin ? (
-          <AdminDashboard />
+          <AdminDashboard onNavigate={setActiveView} />
         ) : activeView === 'enhanced-admin' && isAdmin ? (
           <EnhancedAdminPanel />
         ) : (
