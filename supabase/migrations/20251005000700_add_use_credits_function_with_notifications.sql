@@ -144,7 +144,7 @@ BEGIN
           CASE WHEN v_performer_email IS NOT NULL THEN
             '<p style="font-size: 0.9em; color: #666;">Action performed by: ' || v_performer_email || '</p>'
           ELSE '' END ||
-          '<p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using CreditApp!</p>' ||
+          '<p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using Property AI!</p>' ||
           '</div></body></html>';
       ELSE
         v_subject := 'Credits Deducted from Your Account';
@@ -160,7 +160,7 @@ BEGIN
           CASE WHEN v_performer_email IS NOT NULL THEN
             '<p style="font-size: 0.9em; color: #666;">Action performed by: ' || v_performer_email || '</p>'
           ELSE '' END ||
-          '<p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using CreditApp!</p>' ||
+          '<p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using Property AI!</p>' ||
           '</div></body></html>';
       END IF;
       
@@ -182,7 +182,7 @@ BEGIN
         '<p style="margin: 5px 0;"><strong>Previous Balance:</strong> ' || v_old_credits || ' credits</p>' ||
         '<p style="margin: 5px 0;"><strong>New Balance:</strong> ' || v_new_credits || ' credits</p>' ||
         '</div>' ||
-        '<p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using CreditApp!</p>' ||
+        '<p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using Property AI!</p>' ||
         '</div></body></html>';
       
     WHEN 'role_change' THEN
@@ -194,7 +194,7 @@ BEGIN
         '<div style="max-width: 600px; margin: 0 auto; padding: 20px;">' ||
         '<h2 style="color: #2563eb;">Role Updated</h2>' ||
         '<p>Hello,</p>' ||
-        '<p>Your role in CreditApp has been updated.</p>' ||
+        '<p>Your role in Property AI has been updated.</p>' ||
         '<div style="background: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">' ||
         '<p style="margin: 5px 0;"><strong>Previous Role:</strong> ' || COALESCE(v_old_role, 'user') || '</p>' ||
         '<p style="margin: 5px 0;"><strong>New Role:</strong> ' || v_new_role || '</p>' ||
@@ -202,7 +202,7 @@ BEGIN
         CASE WHEN v_performer_email IS NOT NULL THEN
           '<p style="font-size: 0.9em; color: #666;">Action performed by: ' || v_performer_email || '</p>'
         ELSE '' END ||
-        '<p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using CreditApp!</p>' ||
+        '<p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using Property AI!</p>' ||
         '</div></body></html>';
         
     ELSE

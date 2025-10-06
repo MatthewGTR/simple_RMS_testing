@@ -32,7 +32,7 @@ export function Navigation({ activeView, onViewChange }: NavigationProps) {
               <div className="bg-blue-600 rounded-lg p-2">
                 <Shield className="w-6 h-6 text-white" />
               </div>
-              <span className="ml-3 text-xl font-bold text-gray-900">CreditApp</span>
+              <span className="ml-3 text-xl font-bold text-gray-900">Property AI</span>
             </div>
 
             <div className="flex space-x-4">

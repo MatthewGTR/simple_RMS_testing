@@ -137,7 +137,7 @@ Deno.serve(async (req: Request) => {
                       <p style="margin: 5px 0;"><strong>New Balance:</strong> ${newCredits} credits</p>
                     </div>
                     <p style="font-size: 0.9em; color: #666;">Action performed by: ${adminUser?.email || 'Admin'}</p>
-                    <p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using CreditApp!</p>
+                    <p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using Property AI!</p>
                   </div></body></html>`
               })
             });
@@ -208,13 +208,13 @@ Deno.serve(async (req: Request) => {
                   <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
                     <h2 style="color: #2563eb;">Role Updated</h2>
                     <p>Hello,</p>
-                    <p>Your role in CreditApp has been updated.</p>
+                    <p>Your role in Property AI has been updated.</p>
                     <div style="background: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
                       <p style="margin: 5px 0;"><strong>Previous Role:</strong> ${oldRole}</p>
                       <p style="margin: 5px 0;"><strong>New Role:</strong> ${newRole}</p>
                     </div>
                     <p style="font-size: 0.9em; color: #666;">Action performed by: ${adminUser?.email || 'Admin'}</p>
-                    <p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using CreditApp!</p>
+                    <p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using Property AI!</p>
                   </div></body></html>`
               })
             });
@@ -286,7 +286,7 @@ Deno.serve(async (req: Request) => {
                           <p style="margin: 5px 0;"><strong>Reason:</strong> ${p_reason || `Bulk credit ${p_delta > 0 ? 'addition' : 'deduction'}`}</p>
                         </div>
                         <p style="font-size: 0.9em; color: #666;">Action performed by: ${adminUser?.email || 'Admin'}</p>
-                        <p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using CreditApp!</p>
+                        <p style="margin-top: 30px; font-size: 0.9em; color: #666;">Thank you for using Property AI!</p>
                       </div></body></html>`
                   })
                 });

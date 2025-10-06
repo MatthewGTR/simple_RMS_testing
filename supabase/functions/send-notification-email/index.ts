@@ -54,7 +54,7 @@ Deno.serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "CreditApp <notifications@resend.dev>",
+        from: "Property AI <notifications@resend.dev>",
         to: [to],
         subject,
         html,
