@@ -868,7 +868,7 @@ export function EnhancedAdminPanel() {
                             <Minus className="w-3.5 h-3.5 mr-1" />
                             -10
                           </button>
-                          {isSuperAdmin && userProfile.role !== 'super_admin' && (
+                          {isSuperAdmin && (
                             <select
                               value={userProfile.role}
                               onChange={(e) => promoteUser(userProfile.id, e.target.value as 'admin' | 'user' | 'super_admin')}
