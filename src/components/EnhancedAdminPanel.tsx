@@ -68,6 +68,14 @@ export function EnhancedAdminPanel() {
   const [sortField, setSortField] = useState<keyof Profile | null>('role');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
+  const [passwordConfirmModal, setPasswordConfirmModal] = useState<{
+    show: boolean;
+    userId: string;
+    newRole: 'admin' | 'user' | 'super_admin';
+  } | null>(null);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   const isSuperAdmin = profile?.role === 'super_admin';
 
@@ -276,17 +284,43 @@ export function EnhancedAdminPanel() {
     }
   };
 
-  const promoteUser = async (userId: string, newRole: 'admin' | 'user' | 'super_admin') => {
+  const initiateRoleChange = (userId: string, newRole: 'admin' | 'user' | 'super_admin') => {
     if (!isSuperAdmin) {
       setError('Super admin access required');
+      return;
+    }
+    setPasswordConfirmModal({ show: true, userId, newRole });
+    setConfirmPassword('');
+    setPasswordError('');
+  };
+
+  const confirmRoleChange = async () => {
+    if (!passwordConfirmModal) return;
+
+    const { userId, newRole } = passwordConfirmModal;
+
+    if (!confirmPassword) {
+      setPasswordError('Password is required');
       return;
     }
 
     setUpdating(userId);
     setError(null);
     setMessage('');
+    setPasswordError('');
 
     try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: confirmPassword,
+      });
+
+      if (signInError) {
+        setPasswordError('Incorrect password');
+        setUpdating(null);
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No active session');
 
@@ -316,6 +350,9 @@ export function EnhancedAdminPanel() {
       if (historyModalUserId === userId) {
         await fetchUserTransactions(userId);
       }
+
+      setPasswordConfirmModal(null);
+      setConfirmPassword('');
     } catch (err: any) {
       setError(`Failed to update role: ${err.message}`);
     } finally {
@@ -871,7 +908,7 @@ export function EnhancedAdminPanel() {
                           {isSuperAdmin && (
                             <select
                               value={userProfile.role}
-                              onChange={(e) => promoteUser(userProfile.id, e.target.value as 'admin' | 'user' | 'super_admin')}
+                              onChange={(e) => initiateRoleChange(userProfile.id, e.target.value as 'admin' | 'user' | 'super_admin')}
                               disabled={updating === userProfile.id}
                               className="inline-flex items-center px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 disabled:opacity-50 text-xs font-semibold transition-all border border-blue-200 cursor-pointer"
                             >
@@ -1342,6 +1379,88 @@ export function EnhancedAdminPanel() {
             </div>
           );
         })()}
+
+        {/* Password Confirmation Modal */}
+        {passwordConfirmModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-gray-200">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-gray-900 flex items-center">
+                    <Shield className="w-6 h-6 mr-2 text-orange-600" />
+                    Confirm Role Change
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setPasswordConfirmModal(null);
+                      setConfirmPassword('');
+                      setPasswordError('');
+                    }}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                  <p className="text-sm text-orange-800">
+                    You are about to change a user's role. This is a critical action that requires password confirmation.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Enter your password to confirm
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      setPasswordError('');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        confirmRoleChange();
+                      }
+                    }}
+                    placeholder="Password"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    autoFocus
+                  />
+                  {passwordError && (
+                    <p className="mt-2 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      {passwordError}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setPasswordConfirmModal(null);
+                      setConfirmPassword('');
+                      setPasswordError('');
+                    }}
+                    className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-semibold transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmRoleChange}
+                    disabled={!confirmPassword || updating !== null}
+                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {updating ? 'Confirming...' : 'Confirm Change'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
