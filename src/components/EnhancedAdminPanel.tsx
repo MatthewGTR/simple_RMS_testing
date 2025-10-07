@@ -4,7 +4,7 @@ import {
   Users, Download, Key, Search, Plus, Minus, Shield,
   RefreshCw, AlertCircle, CheckCircle, XCircle, Mail,
   FileText, BarChart2, Filter, History, ChevronDown, ChevronUp,
-  TrendingUp, Activity, Zap, Clock, X
+  TrendingUp, Activity, Zap, Clock, X, Eye, Calendar, Phone, MapPin, Briefcase, Award
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { exportUsersToCSV, exportTransactionsToCSV } from '../utils/csvExport';
@@ -60,6 +60,8 @@ export function EnhancedAdminPanel() {
   const [historyModalUserId, setHistoryModalUserId] = useState<string | null>(null);
   const [userTransactions, setUserTransactions] = useState<Record<string, Transaction[]>>({});
   const [loadingUserHistory, setLoadingUserHistory] = useState<boolean>(false);
+
+  const [userDetailsModalId, setUserDetailsModalId] = useState<string | null>(null);
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   const isSuperAdmin = profile?.role === 'super_admin';
@@ -761,6 +763,13 @@ export function EnhancedAdminPanel() {
                             </button>
                           )}
                           <button
+                            onClick={() => setUserDetailsModalId(userProfile.id)}
+                            className="inline-flex items-center px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 text-xs font-semibold transition-all border border-purple-200"
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1" />
+                            View
+                          </button>
+                          <button
                             onClick={() => openHistoryModal(userProfile.id)}
                             className="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-xs font-semibold transition-all border border-gray-200"
                           >
@@ -989,6 +998,232 @@ export function EnhancedAdminPanel() {
             </div>
           </div>
         )}
+
+        {/* User Details Modal */}
+        {userDetailsModalId && (() => {
+          const userProfile = profiles.find(p => p.id === userDetailsModalId);
+          if (!userProfile) return null;
+
+          return (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+              onClick={() => setUserDetailsModalId(null)}
+            >
+              <div
+                className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Modal Header */}
+                <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white bg-opacity-20 rounded-lg">
+                      <Eye className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">User Details</h2>
+                      <p className="text-purple-100 text-sm">{userProfile.email}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setUserDetailsModalId(null)}
+                    className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                  >
+                    <X className="w-6 h-6 text-white" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Basic Information */}
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
+                      <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <Users className="w-5 h-5 mr-2 text-blue-600" />
+                        Basic Information
+                      </h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Full Name</label>
+                          <p className="text-base font-medium text-gray-900 mt-1">{userProfile.full_name || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Email</label>
+                          <p className="text-base font-medium text-gray-900 mt-1">{userProfile.email}</p>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">User Type</label>
+                          <p className="text-base font-medium text-gray-900 mt-1 capitalize">
+                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-lg ${
+                              userProfile.user_type === 'agent'
+                                ? 'bg-green-100 text-green-700 border border-green-200'
+                                : 'bg-blue-100 text-blue-700 border border-blue-200'
+                            }`}>
+                              {userProfile.user_type || 'Consumer'}
+                            </span>
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Role</label>
+                          <p className="text-base font-medium text-gray-900 mt-1">
+                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-lg ${
+                              userProfile.role === 'super_admin'
+                                ? 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border border-purple-200'
+                                : userProfile.role === 'admin'
+                                ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                : 'bg-gray-100 text-gray-700 border border-gray-200'
+                            }`}>
+                              {userProfile.role === 'super_admin' ? 'Super Admin' :
+                               userProfile.role === 'admin' ? 'Admin' : 'User'}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Account Information */}
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200">
+                      <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <Zap className="w-5 h-5 mr-2 text-green-600" />
+                        Account Information
+                      </h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Credits</label>
+                          <p className="text-2xl font-bold text-green-700 mt-1 flex items-center">
+                            <Zap className="w-5 h-5 mr-1" />
+                            {userProfile.credits || 0}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            Joined Date
+                          </label>
+                          <p className="text-base font-medium text-gray-900 mt-1">
+                            {new Date(userProfile.created_at).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Last Updated</label>
+                          <p className="text-base font-medium text-gray-900 mt-1">
+                            {new Date(userProfile.updated_at).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Contact Information */}
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-5 border border-orange-200">
+                      <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <Phone className="w-5 h-5 mr-2 text-orange-600" />
+                        Contact Information
+                      </h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center">
+                            <Phone className="w-4 h-4 mr-1" />
+                            Phone
+                          </label>
+                          <p className="text-base font-medium text-gray-900 mt-1">{userProfile.phone || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center">
+                            <MapPin className="w-4 h-4 mr-1" />
+                            Country
+                          </label>
+                          <p className="text-base font-medium text-gray-900 mt-1">{userProfile.country || 'Not provided'}</p>
+                        </div>
+                        {userProfile.user_type === 'consumer' && (
+                          <div>
+                            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Preferred Contact</label>
+                            <p className="text-base font-medium text-gray-900 mt-1 capitalize">
+                              {userProfile.preferred_contact_method || 'Email'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Agent-specific Information */}
+                    {userProfile.user_type === 'agent' && (
+                      <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-5 border border-teal-200">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                          <Briefcase className="w-5 h-5 mr-2 text-teal-600" />
+                          Agent Information
+                        </h3>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center">
+                              <Award className="w-4 h-4 mr-1" />
+                              REN Number
+                            </label>
+                            <p className="text-base font-medium text-gray-900 mt-1">{userProfile.ren_number || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Agency Name</label>
+                            <p className="text-base font-medium text-gray-900 mt-1">{userProfile.agency_name || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Agency License</label>
+                            <p className="text-base font-medium text-gray-900 mt-1">{userProfile.agency_license || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Experience</label>
+                            <p className="text-base font-medium text-gray-900 mt-1">
+                              {userProfile.years_experience ? `${userProfile.years_experience} years` : 'Not provided'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Consumer-specific Information */}
+                    {userProfile.user_type === 'consumer' && (
+                      <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl p-5 border border-pink-200">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                          <Users className="w-5 h-5 mr-2 text-pink-600" />
+                          Consumer Information
+                        </h3>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center">
+                              <Calendar className="w-4 h-4 mr-1" />
+                              Date of Birth
+                            </label>
+                            <p className="text-base font-medium text-gray-900 mt-1">
+                              {userProfile.date_of_birth
+                                ? new Date(userProfile.date_of_birth).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })
+                                : 'Not provided'}
+                            </p>
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center">
+                              <Briefcase className="w-4 h-4 mr-1" />
+                              Occupation
+                            </label>
+                            <p className="text-base font-medium text-gray-900 mt-1">{userProfile.occupation || 'Not provided'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
