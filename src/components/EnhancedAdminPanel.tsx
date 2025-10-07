@@ -276,7 +276,7 @@ export function EnhancedAdminPanel() {
     }
   };
 
-  const promoteUser = async (userId: string, newRole: 'admin' | 'user') => {
+  const promoteUser = async (userId: string, newRole: 'admin' | 'user' | 'super_admin') => {
     if (!isSuperAdmin) {
       setError('Super admin access required');
       return;
@@ -309,7 +309,8 @@ export function EnhancedAdminPanel() {
       }
 
       const targetUser = profiles.find(p => p.id === userId);
-      setMessage(`User ${newRole === 'admin' ? 'promoted to admin' : 'demoted to user'} successfully. Email sent to ${targetUser?.email}.`);
+      const roleLabel = newRole === 'super_admin' ? 'super admin' : newRole === 'admin' ? 'admin' : 'user';
+      setMessage(`User role updated to ${roleLabel} successfully. Email sent to ${targetUser?.email}.`);
       await fetchProfiles();
       if (isSuperAdmin) await fetchTransactions();
       if (historyModalUserId === userId) {
@@ -868,14 +869,16 @@ export function EnhancedAdminPanel() {
                             -10
                           </button>
                           {isSuperAdmin && userProfile.role !== 'super_admin' && (
-                            <button
-                              onClick={() => promoteUser(userProfile.id, userProfile.role === 'admin' ? 'user' : 'admin')}
+                            <select
+                              value={userProfile.role}
+                              onChange={(e) => promoteUser(userProfile.id, e.target.value as 'admin' | 'user' | 'super_admin')}
                               disabled={updating === userProfile.id}
-                              className="inline-flex items-center px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 disabled:opacity-50 text-xs font-semibold transition-all border border-blue-200"
+                              className="inline-flex items-center px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 disabled:opacity-50 text-xs font-semibold transition-all border border-blue-200 cursor-pointer"
                             >
-                              <Shield className="w-3.5 h-3.5 mr-1" />
-                              {userProfile.role === 'admin' ? 'Demote' : 'Promote'}
-                            </button>
+                              <option value="user">User</option>
+                              <option value="admin">Admin</option>
+                              <option value="super_admin">Super Admin</option>
+                            </select>
                           )}
                           <button
                             onClick={() => setUserDetailsModalId(userProfile.id)}
