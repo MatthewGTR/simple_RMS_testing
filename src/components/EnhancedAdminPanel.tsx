@@ -49,6 +49,7 @@ export function EnhancedAdminPanel() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
 
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
@@ -425,6 +426,16 @@ export function EnhancedAdminPanel() {
     }
   };
 
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+  };
+
+  const handleSearchKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   const filteredProfiles = profiles
     .filter(p => {
       const matchesSearch = !searchQuery ||
@@ -600,11 +611,19 @@ export function EnhancedAdminPanel() {
                 <input
                   type="text"
                   placeholder="Search by email, name, or ID..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyPress={handleSearchKeyPress}
                   className="pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full transition-all"
                 />
               </div>
+              <button
+                onClick={handleSearch}
+                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold shadow-sm hover:shadow-md flex items-center gap-2"
+              >
+                <Search className="w-4 h-4" />
+                Search
+              </button>
               <div className="relative">
                 <Filter className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
                 <select
