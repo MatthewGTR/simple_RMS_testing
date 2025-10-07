@@ -1,9 +1,11 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { User, CreditCard, Calendar } from 'lucide-react'
+import { User, CreditCard, Calendar, CheckSquare } from 'lucide-react'
+import PendingApprovals from './PendingApprovals'
 
 export function Dashboard() {
   const { profile } = useAuth()
+  const [activeTab, setActiveTab] = useState<'overview' | 'approvals'>('overview')
 
   if (!profile) {
     return (
@@ -13,8 +15,47 @@ export function Dashboard() {
     )
   }
 
+  const isSuperAdmin = profile?.role === 'super_admin'
+
   return (
     <div className="max-w-4xl mx-auto">
+      {isSuperAdmin && (
+        <div className="mb-6">
+          <div className="flex gap-3 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`px-6 py-3 font-semibold transition-all ${
+                activeTab === 'overview'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Overview
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('approvals')}
+              className={`px-6 py-3 font-semibold transition-all ${
+                activeTab === 'approvals'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <CheckSquare className="w-4 h-4" />
+                Pending Approvals
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'approvals' && isSuperAdmin ? (
+        <PendingApprovals />
+      ) : (
+        <>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-600 mt-2">Welcome back! Here's your account overview.</p>
@@ -141,6 +182,8 @@ export function Dashboard() {
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   )
 }
