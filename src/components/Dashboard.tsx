@@ -17,37 +17,41 @@ export function Dashboard() {
 
   const isSuperAdmin = profile?.role === 'super_admin'
 
+  console.log('Dashboard - User role:', profile?.role, 'Is Super Admin:', isSuperAdmin)
+
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       {isSuperAdmin && (
-        <div className="mb-6">
-          <div className="flex gap-3 border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`px-6 py-3 font-semibold transition-all ${
-                activeTab === 'overview'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Overview
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('approvals')}
-              className={`px-6 py-3 font-semibold transition-all ${
-                activeTab === 'approvals'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <CheckSquare className="w-4 h-4" />
-                Pending Approvals
-              </div>
-            </button>
+        <div className="mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`flex-1 px-6 py-3 font-semibold rounded-xl transition-all ${
+                  activeTab === 'overview'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <User className="w-5 h-5" />
+                  Overview
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('approvals')}
+                className={`flex-1 px-6 py-3 font-semibold rounded-xl transition-all ${
+                  activeTab === 'approvals'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <CheckSquare className="w-5 h-5" />
+                  Pending Approvals
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       )}
