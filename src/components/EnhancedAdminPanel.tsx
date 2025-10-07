@@ -64,8 +64,8 @@ export function EnhancedAdminPanel() {
 
   const [userDetailsModalId, setUserDetailsModalId] = useState<string | null>(null);
 
-  const [sortField, setSortField] = useState<keyof Profile | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = useState<keyof Profile | null>('role');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   const isSuperAdmin = profile?.role === 'super_admin';
@@ -441,6 +441,27 @@ export function EnhancedAdminPanel() {
 
       let aValue = a[sortField];
       let bValue = b[sortField];
+
+      // Special handling for role field to rank super_admin > admin > user
+      if (sortField === 'role') {
+        const roleRank = (role: string) => {
+          switch (role) {
+            case 'super_admin': return 3;
+            case 'admin': return 2;
+            case 'user': return 1;
+            default: return 0;
+          }
+        };
+
+        const aRank = roleRank(String(aValue));
+        const bRank = roleRank(String(bValue));
+
+        if (sortDirection === 'asc') {
+          return aRank - bRank;
+        } else {
+          return bRank - aRank;
+        }
+      }
 
       // Handle null/undefined values
       if (aValue === null || aValue === undefined) aValue = '';
