@@ -400,15 +400,8 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
               onClick={() => onNavigate?.('enhanced-admin')}
               className="w-full text-left px-4 py-3 bg-white rounded-lg hover:bg-blue-50 transition-colors border border-gray-200"
             >
-              <span className="font-medium text-gray-900">User Management</span>
-              <p className="text-sm text-gray-600">Manage users, roles, and permissions</p>
-            </button>
-            <button
-              onClick={() => onNavigate?.('enhanced-admin')}
-              className="w-full text-left px-4 py-3 bg-white rounded-lg hover:bg-blue-50 transition-colors border border-gray-200"
-            >
-              <span className="font-medium text-gray-900">Credit Management</span>
-              <p className="text-sm text-gray-600">Allocate and track listing credits</p>
+              <span className="font-medium text-gray-900">User & Credit Management</span>
+              <p className="text-sm text-gray-600">Manage users, roles, permissions, and credits</p>
             </button>
             <button
               onClick={() => {
