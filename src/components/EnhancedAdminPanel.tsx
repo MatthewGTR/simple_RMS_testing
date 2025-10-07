@@ -769,19 +769,6 @@ export function EnhancedAdminPanel() {
                       )}
                     </div>
                   </th>
-                  <th
-                    className="px-6 py-5 text-left text-sm font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                    onClick={() => handleSort('created_at')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Joined
-                      {sortField === 'created_at' ? (
-                        sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
-                      ) : (
-                        <ArrowUpDown className="w-4 h-4 text-gray-400" />
-                      )}
-                    </div>
-                  </th>
                   <th className="px-6 py-5 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -842,12 +829,6 @@ export function EnhancedAdminPanel() {
                           <Zap className="w-3.5 h-3.5 mr-1.5" />
                           {userProfile.credits || 0}
                         </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Clock className="w-4 h-4 mr-1.5 text-gray-400" />
-                          {new Date(userProfile.created_at).toLocaleDateString()}
-                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-2">
