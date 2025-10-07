@@ -4,7 +4,8 @@ import {
   Users, Download, Key, Search, Plus, Minus, Shield,
   RefreshCw, AlertCircle, CheckCircle, XCircle, Mail,
   FileText, BarChart2, Filter, History, ChevronDown, ChevronUp,
-  TrendingUp, Activity, Zap, Clock, X, Eye, Calendar, Phone, MapPin, Briefcase, Award
+  TrendingUp, Activity, Zap, Clock, X, Eye, Calendar, Phone, MapPin, Briefcase, Award,
+  ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { exportUsersToCSV, exportTransactionsToCSV } from '../utils/csvExport';
@@ -62,6 +63,9 @@ export function EnhancedAdminPanel() {
   const [loadingUserHistory, setLoadingUserHistory] = useState<boolean>(false);
 
   const [userDetailsModalId, setUserDetailsModalId] = useState<string | null>(null);
+
+  const [sortField, setSortField] = useState<keyof Profile | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   const isSuperAdmin = profile?.role === 'super_admin';
@@ -412,16 +416,46 @@ export function EnhancedAdminPanel() {
     }
   };
 
-  const filteredProfiles = profiles.filter(p => {
-    const matchesSearch = !searchQuery ||
-      p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.id.toLowerCase().includes(searchQuery.toLowerCase());
+  const handleSort = (field: keyof Profile) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
-    const matchesRole = filterRole === 'all' || p.role === filterRole;
+  const filteredProfiles = profiles
+    .filter(p => {
+      const matchesSearch = !searchQuery ||
+        p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.id.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchesSearch && matchesRole;
-  });
+      const matchesRole = filterRole === 'all' || p.role === filterRole;
+
+      return matchesSearch && matchesRole;
+    })
+    .sort((a, b) => {
+      if (!sortField) return 0;
+
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+
+      // Handle null/undefined values
+      if (aValue === null || aValue === undefined) aValue = '';
+      if (bValue === null || bValue === undefined) bValue = '';
+
+      // Convert to strings for comparison if needed
+      const aStr = String(aValue).toLowerCase();
+      const bStr = String(bValue).toLowerCase();
+
+      if (sortDirection === 'asc') {
+        return aStr > bStr ? 1 : aStr < bStr ? -1 : 0;
+      } else {
+        return aStr < bStr ? 1 : aStr > bStr ? -1 : 0;
+      }
+    });
 
   const stats = {
     totalUsers: profiles.length,
@@ -662,11 +696,71 @@ export function EnhancedAdminPanel() {
                       />
                     </th>
                   )}
-                  <th className="px-6 py-5 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">User</th>
-                  <th className="px-6 py-5 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-5 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Role</th>
-                  <th className="px-6 py-5 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Credits</th>
-                  <th className="px-6 py-5 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Joined</th>
+                  <th
+                    className="px-6 py-5 text-left text-sm font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('email')}
+                  >
+                    <div className="flex items-center gap-2">
+                      User
+                      {sortField === 'email' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      ) : (
+                        <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    className="px-6 py-5 text-left text-sm font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('user_type')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Type
+                      {sortField === 'user_type' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      ) : (
+                        <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    className="px-6 py-5 text-left text-sm font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('role')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Role
+                      {sortField === 'role' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      ) : (
+                        <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    className="px-6 py-5 text-left text-sm font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('credits')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Credits
+                      {sortField === 'credits' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      ) : (
+                        <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    className="px-6 py-5 text-left text-sm font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('created_at')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Joined
+                      {sortField === 'created_at' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      ) : (
+                        <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                      )}
+                    </div>
+                  </th>
                   <th className="px-6 py-5 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
