@@ -837,15 +837,6 @@ export function AgentDashboard() {
                         </div>
                       )}
 
-                      {/* Edit Overlay */}
-                      {!batchMode && (
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <div className="bg-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
-                            <Edit className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm font-medium text-gray-900">Click to Edit</span>
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                     {/* Content */}
