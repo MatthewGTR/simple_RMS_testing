@@ -98,10 +98,18 @@ function AppContent() {
   }
 
   console.log('User authenticated, showing app')
+  console.log('Profile data:', profile)
+  console.log('User type:', profile?.user_type)
+  console.log('Role:', profile?.role)
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
-  const isAgent = profile?.user_type === 'agent'
+  // Check if user is agent by user_type OR by having ren_number (agent-specific field)
+  const isAgent = profile?.user_type === 'agent' || (profile?.ren_number && profile.ren_number.trim() !== '')
   const isConsumer = profile?.user_type === 'consumer'
+
+  console.log('isAdmin:', isAdmin)
+  console.log('isAgent:', isAgent)
+  console.log('isConsumer:', isConsumer)
 
   if (isAdmin) {
     return (
@@ -181,11 +189,25 @@ function AppContent() {
     )
   }
 
+  // Default fallback for users without specific roles
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation activeView="dashboard" onViewChange={() => {}} />
-      <main className="py-8 px-4 sm:px-6 lg:px-8">
-        <Dashboard />
+      <Navigation activeView={adminView} onViewChange={setAdminView} />
+      <main className={adminView.startsWith('public') || adminView.startsWith('browse') ? '' : 'py-8 px-4 sm:px-6 lg:px-8'}>
+        {adminView === 'dashboard' ? (
+          <ConsumerDashboard />
+        ) : adminView === 'public-home' ? (
+          <PublicLanding onShowAuth={() => {}} onNavigate={(section) => {
+            if (section === 'buy') setAdminView('browse-buy');
+            else if (section === 'rent') setAdminView('browse-rent');
+          }} />
+        ) : adminView === 'browse-buy' ? (
+          <PropertyBrowser section="buy" onBack={() => setAdminView('public-home')} onShowAuth={() => {}} />
+        ) : adminView === 'browse-rent' ? (
+          <PropertyBrowser section="rent" onBack={() => setAdminView('public-home')} onShowAuth={() => {}} />
+        ) : (
+          <ConsumerDashboard />
+        )}
       </main>
     </div>
   )
