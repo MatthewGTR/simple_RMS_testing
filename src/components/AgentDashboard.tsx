@@ -83,7 +83,6 @@ export function AgentDashboard() {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (!target.closest('.dropdown-menu') && !target.closest('.menu-button')) {
-        setActiveMenu(null);
         setShowBatchMenu(false);
       }
     };
@@ -771,8 +770,9 @@ export function AgentDashboard() {
                 {filteredProperties.map((property) => (
                   <div
                     key={property.id}
-                    className={`bg-white rounded-xl border-2 overflow-hidden hover:shadow-lg transition-all group ${
-                      selectedProperties.has(property.id) ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
+                    onClick={() => !batchMode && handleEditProperty(property)}
+                    className={`bg-white rounded-xl border-2 overflow-hidden hover:shadow-lg transition-all cursor-pointer group ${
+                      selectedProperties.has(property.id) ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200 hover:border-blue-300'
                     }`}
                   >
                     {/* Image */}
@@ -793,7 +793,10 @@ export function AgentDashboard() {
                       {batchMode && (
                         <div className="absolute top-3 left-3">
                           <button
-                            onClick={() => togglePropertySelection(property.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              togglePropertySelection(property.id);
+                            }}
                             className="w-8 h-8 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
                           >
                             {selectedProperties.has(property.id) ? (
@@ -834,78 +837,13 @@ export function AgentDashboard() {
                         </div>
                       )}
 
-                      {/* Menu Button */}
+                      {/* Edit Overlay */}
                       {!batchMode && (
-                        <div className="absolute bottom-3 right-3">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveMenu(activeMenu === property.id ? null : property.id);
-                            }}
-                            className="menu-button w-8 h-8 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
-                          >
-                            <MoreVertical className="w-4 h-4 text-gray-700" />
-                          </button>
-
-                          {/* Dropdown Menu */}
-                          {activeMenu === property.id && (
-                            <div className="dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-10">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditProperty(property);
-                                }}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                              >
-                                <Edit className="w-4 h-4" />
-                                Edit Details
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDuplicateProperty(property);
-                                }}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                              >
-                                <Copy className="w-4 h-4" />
-                                Duplicate
-                              </button>
-                              {property.status === 'active' && !property.is_featured && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleBoostProperty(property.id);
-                                  }}
-                                  disabled={stats.boostingCredits <= 0}
-                                  className="w-full text-left px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  <Zap className="w-4 h-4" />
-                                  Feature Listing
-                                </button>
-                              )}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleToggleStatus(property);
-                                }}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                              >
-                                <Power className="w-4 h-4" />
-                                {property.status === 'active' ? 'Deactivate' : 'Activate'}
-                              </button>
-                              <div className="border-t border-gray-200 my-1"></div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setShowDeleteConfirm(property.id);
-                                }}
-                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                Delete
-                              </button>
-                            </div>
-                          )}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <div className="bg-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
+                            <Edit className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm font-medium text-gray-900">Click to Edit</span>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -975,6 +913,11 @@ export function AgentDashboard() {
             setShowEditModal(false);
             setSelectedProperty(null);
             setTemplateProperty(null);
+          }}
+          onDelete={() => {
+            loadProperties();
+            setShowEditModal(false);
+            setSelectedProperty(null);
           }}
           agentId={user?.id || ''}
         />

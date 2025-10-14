@@ -42,6 +42,7 @@ interface PropertyEditModalProps {
   templateProperty?: Property | null;
   onClose: () => void;
   onSave: () => void;
+  onDelete?: (propertyId: string) => void;
   agentId: string;
 }
 
@@ -51,7 +52,7 @@ interface Suggestion {
   avgPrice?: number;
 }
 
-export function PropertyEditModal({ property, templateProperty, onClose, onSave, agentId }: PropertyEditModalProps) {
+export function PropertyEditModal({ property, templateProperty, onClose, onSave, onDelete, agentId }: PropertyEditModalProps) {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'basic' | 'details' | 'property_info' | 'location' | 'media'>('basic');
   const [allProperties, setAllProperties] = useState<Property[]>([]);
@@ -340,6 +341,53 @@ export function PropertyEditModal({ property, templateProperty, onClose, onSave,
     }));
   };
 
+  const handleDelete = async () => {
+    if (!property?.id) return;
+
+    if (!window.confirm('Are you sure you want to delete this property? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .delete()
+        .eq('id', property.id);
+
+      if (error) throw error;
+
+      showNotification('success', 'Property deleted successfully');
+      if (onDelete) {
+        onDelete(property.id);
+      }
+      onClose();
+    } catch (error: any) {
+      console.error('Error deleting property:', error);
+      showNotification('error', error.message || 'Failed to delete property');
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    if (!property?.id) return;
+
+    const newStatus = property.status === 'active' ? 'inactive' : 'active';
+
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update({ status: newStatus })
+        .eq('id', property.id);
+
+      if (error) throw error;
+
+      showNotification('success', `Property ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
+      onSave();
+    } catch (error: any) {
+      console.error('Error toggling status:', error);
+      showNotification('error', error.message || 'Failed to update status');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -433,12 +481,36 @@ export function PropertyEditModal({ property, templateProperty, onClose, onSave,
               </p>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/50 rounded-lg transition-colors"
-          >
-            <X className="w-6 h-6 text-gray-600" />
-          </button>
+          <div className="flex items-center gap-2">
+            {property?.id && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleToggleStatus}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    property.status === 'active'
+                      ? 'bg-gray-500 hover:bg-gray-600 text-white'
+                      : 'bg-green-500 hover:bg-green-600 text-white'
+                  }`}
+                >
+                  {property.status === 'active' ? 'Deactivate' : 'Activate'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium text-sm transition-colors"
+                >
+                  Delete
+                </button>
+              </>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/50 rounded-lg transition-colors"
+            >
+              <X className="w-6 h-6 text-gray-600" />
+            </button>
+          </div>
         </div>
 
         <div className="border-b border-gray-200 px-6 bg-gray-50">
