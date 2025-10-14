@@ -117,7 +117,9 @@ export function PropertyEditModal({ property, templateProperty, onClose, onSave,
   }, []);
 
   useEffect(() => {
+    console.log('PropertyEditModal - property changed:', property);
     if (property) {
+      console.log('Loading property data into form:', property);
       setFormData({
         ...property,
         amenities: property.amenities || [],

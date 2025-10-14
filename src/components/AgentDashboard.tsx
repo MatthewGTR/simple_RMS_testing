@@ -221,10 +221,12 @@ export function AgentDashboard() {
   };
 
   const handleEditProperty = (property: Property) => {
+    console.log('Edit property clicked:', property);
     setSelectedProperty(property);
     setTemplateProperty(null);
     setShowEditModal(true);
     setActiveMenu(null);
+    console.log('Edit modal should open now');
   };
 
   const handleDuplicateProperty = async (property: Property) => {
@@ -836,7 +838,10 @@ export function AgentDashboard() {
                       {!batchMode && (
                         <div className="absolute bottom-3 right-3">
                           <button
-                            onClick={() => setActiveMenu(activeMenu === property.id ? null : property.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenu(activeMenu === property.id ? null : property.id);
+                            }}
                             className="menu-button w-8 h-8 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
                           >
                             <MoreVertical className="w-4 h-4 text-gray-700" />
@@ -846,14 +851,20 @@ export function AgentDashboard() {
                           {activeMenu === property.id && (
                             <div className="dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-10">
                               <button
-                                onClick={() => handleEditProperty(property)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditProperty(property);
+                                }}
                                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                               >
                                 <Edit className="w-4 h-4" />
                                 Edit Details
                               </button>
                               <button
-                                onClick={() => handleDuplicateProperty(property)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDuplicateProperty(property);
+                                }}
                                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                               >
                                 <Copy className="w-4 h-4" />
@@ -861,7 +872,10 @@ export function AgentDashboard() {
                               </button>
                               {property.status === 'active' && !property.is_featured && (
                                 <button
-                                  onClick={() => handleBoostProperty(property.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleBoostProperty(property.id);
+                                  }}
                                   disabled={stats.boostingCredits <= 0}
                                   className="w-full text-left px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
@@ -870,7 +884,10 @@ export function AgentDashboard() {
                                 </button>
                               )}
                               <button
-                                onClick={() => handleToggleStatus(property)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleStatus(property);
+                                }}
                                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                               >
                                 <Power className="w-4 h-4" />
@@ -878,7 +895,10 @@ export function AgentDashboard() {
                               </button>
                               <div className="border-t border-gray-200 my-1"></div>
                               <button
-                                onClick={() => setShowDeleteConfirm(property.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowDeleteConfirm(property.id);
+                                }}
                                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                               >
                                 <Trash2 className="w-4 h-4" />
