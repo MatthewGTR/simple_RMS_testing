@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import {
   Search, MapPin, Home, Building2, TrendingUp, Shield, Users,
   ArrowRight, Bed, Bath, Square, ChevronDown, Menu, X, Phone, Mail,
-  Star, CheckCircle, Sparkles, Award, Clock, Heart
+  Star, CheckCircle, Sparkles, Award, Clock, Heart, User, LogOut
 } from 'lucide-react';
 
 interface Property {
@@ -22,14 +22,19 @@ interface Property {
 interface PublicLandingProps {
   onShowAuth: (mode?: 'signin' | 'role-selection') => void;
   onNavigate: (section: 'buy' | 'rent' | 'sell' | 'new-development') => void;
+  user?: any;
+  profile?: any;
+  onGoToPortal?: () => void;
+  onSignOut?: () => void;
 }
 
-export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
+export function PublicLanding({ onShowAuth, onNavigate, user, profile, onGoToPortal, onSignOut }: PublicLandingProps) {
   const [properties, setProperties] = useState<Property[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState('buy');
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   useEffect(() => {
     loadFeaturedProperties();
@@ -102,12 +107,76 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
                 New Development
               </button>
               <div className="w-px h-8 bg-gray-300 mx-2"></div>
-              <button
-                onClick={() => onShowAuth('signin')}
-                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg transition-all font-semibold"
-              >
-                Login / Register
-              </button>
+
+              {user ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg transition-all font-semibold"
+                  >
+                    <User className="w-5 h-5" />
+                    <span>{profile?.email?.split('@')[0] || 'User'}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {showUserMenu && (
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50">
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <p className="text-sm font-semibold text-gray-900">{profile?.email}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {profile?.role === 'super_admin' ? '⭐ Super Admin' :
+                           profile?.role === 'admin' ? '👑 Admin' :
+                           profile?.user_type === 'agent' ? '🏢 Agent' :
+                           '👤 Consumer'}
+                        </p>
+                      </div>
+
+                      {onGoToPortal && (
+                        <button
+                          onClick={() => {
+                            onGoToPortal();
+                            setShowUserMenu(false);
+                          }}
+                          className="w-full text-left px-4 py-3 text-gray-700 hover:bg-blue-50 transition-colors flex items-center gap-3"
+                        >
+                          <Home className="w-5 h-5 text-blue-600" />
+                          <div>
+                            <p className="font-medium">Go to {
+                              profile?.role === 'admin' || profile?.role === 'super_admin' ? 'Admin Panel' :
+                              profile?.user_type === 'agent' ? 'Agent Dashboard' :
+                              'My Dashboard'
+                            }</p>
+                            <p className="text-xs text-gray-500">Return to your portal</p>
+                          </div>
+                        </button>
+                      )}
+
+                      {onSignOut && (
+                        <button
+                          onClick={() => {
+                            onSignOut();
+                            setShowUserMenu(false);
+                          }}
+                          className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3 border-t border-gray-100"
+                        >
+                          <LogOut className="w-5 h-5" />
+                          <div>
+                            <p className="font-medium">Sign Out</p>
+                            <p className="text-xs text-red-500">Logout from your account</p>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => onShowAuth('signin')}
+                  className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg transition-all font-semibold"
+                >
+                  Login / Register
+                </button>
+              )}
             </nav>
 
             <button
@@ -147,12 +216,51 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
                 New Development
               </button>
               <div className="h-px bg-gray-200 my-2"></div>
-              <button
-                onClick={() => { onShowAuth('signin'); setMobileMenuOpen(false); }}
-                className="block w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold"
-              >
-                Login / Register
-              </button>
+
+              {user ? (
+                <>
+                  <div className="px-4 py-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm font-semibold text-gray-900">{profile?.email}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {profile?.role === 'super_admin' ? '⭐ Super Admin' :
+                       profile?.role === 'admin' ? '👑 Admin' :
+                       profile?.user_type === 'agent' ? '🏢 Agent' :
+                       '👤 Consumer'}
+                    </p>
+                  </div>
+
+                  {onGoToPortal && (
+                    <button
+                      onClick={() => { onGoToPortal(); setMobileMenuOpen(false); }}
+                      className="flex items-center gap-3 w-full px-4 py-3 bg-blue-50 text-blue-700 rounded-lg font-medium"
+                    >
+                      <Home className="w-5 h-5" />
+                      Go to {
+                        profile?.role === 'admin' || profile?.role === 'super_admin' ? 'Admin Panel' :
+                        profile?.user_type === 'agent' ? 'Dashboard' :
+                        'My Dashboard'
+                      }
+                    </button>
+                  )}
+
+                  {onSignOut && (
+                    <button
+                      onClick={() => { onSignOut(); setMobileMenuOpen(false); }}
+                      className="flex items-center gap-3 w-full px-4 py-3 bg-red-50 text-red-600 rounded-lg font-medium"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      Sign Out
+                    </button>
+                  )}
+                </>
+              ) : (
+                <button
+                  onClick={() => { onShowAuth('signin'); setMobileMenuOpen(false); }}
+                  className="block w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold"
+                >
+                  Login / Register
+                </button>
+              )}
             </div>
           </div>
         )}

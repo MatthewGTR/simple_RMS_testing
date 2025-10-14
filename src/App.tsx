@@ -16,7 +16,7 @@ type PublicSection = 'home' | 'buy' | 'rent' | 'sell' | 'new-development'
 type AdminView = 'dashboard' | 'admin-dashboard' | 'enhanced-admin' | 'properties' | 'public-home' | 'browse-buy' | 'browse-rent'
 
 function AppContent() {
-  const { user, profile, loading, error } = useAuth()
+  const { user, profile, loading, error, signOut } = useAuth()
   const [showAuth, setShowAuth] = useState(false)
   const [authMode, setAuthMode] = useState<'signin' | 'role-selection'>('signin')
   const [publicSection, setPublicSection] = useState<PublicSection>('home')
@@ -87,6 +87,8 @@ function AppContent() {
         <PublicLanding
           onShowAuth={handleShowAuth}
           onNavigate={handleNavigate}
+          user={null}
+          profile={null}
         />
         {showAuth && (
           <UnifiedAuth
@@ -131,10 +133,17 @@ function AppContent() {
           ) : adminView === 'properties' ? (
             <PropertyManagement />
           ) : adminView === 'public-home' ? (
-            <PublicLanding onShowAuth={() => {}} onNavigate={(section) => {
-              if (section === 'buy') setAdminView('browse-buy');
-              else if (section === 'rent') setAdminView('browse-rent');
-            }} />
+            <PublicLanding
+              onShowAuth={() => {}}
+              onNavigate={(section) => {
+                if (section === 'buy') setAdminView('browse-buy');
+                else if (section === 'rent') setAdminView('browse-rent');
+              }}
+              user={user}
+              profile={profile}
+              onGoToPortal={() => setAdminView('admin-dashboard')}
+              onSignOut={signOut}
+            />
           ) : adminView === 'browse-buy' ? (
             <PropertyBrowser section="buy" onBack={() => setAdminView('public-home')} onShowAuth={() => {}} />
           ) : adminView === 'browse-rent' ? (
@@ -155,10 +164,17 @@ function AppContent() {
           {adminView === 'dashboard' ? (
             <AgentDashboard />
           ) : adminView === 'public-home' ? (
-            <PublicLanding onShowAuth={() => {}} onNavigate={(section) => {
-              if (section === 'buy') setAdminView('browse-buy');
+            <PublicLanding
+              onShowAuth={() => {}}
+              onNavigate={(section) => {
+                if (section === 'buy') setAdminView('browse-buy');
               else if (section === 'rent') setAdminView('browse-rent');
-            }} />
+              }}
+              user={user}
+              profile={profile}
+              onGoToPortal={() => setAdminView('dashboard')}
+              onSignOut={signOut}
+            />
           ) : adminView === 'browse-buy' ? (
             <PropertyBrowser section="buy" onBack={() => setAdminView('public-home')} onShowAuth={() => {}} />
           ) : adminView === 'browse-rent' ? (
@@ -182,7 +198,12 @@ function AppContent() {
             <PublicLanding onShowAuth={() => {}} onNavigate={(section) => {
               if (section === 'buy') setAdminView('browse-buy');
               else if (section === 'rent') setAdminView('browse-rent');
-            }} />
+              }}
+              user={user}
+              profile={profile}
+              onGoToPortal={() => setAdminView('dashboard')}
+              onSignOut={signOut}
+            />
           ) : adminView === 'browse-buy' ? (
             <PropertyBrowser section="buy" onBack={() => setAdminView('public-home')} onShowAuth={() => {}} />
           ) : adminView === 'browse-rent' ? (
@@ -203,10 +224,17 @@ function AppContent() {
         {adminView === 'dashboard' ? (
           <ConsumerDashboard />
         ) : adminView === 'public-home' ? (
-          <PublicLanding onShowAuth={() => {}} onNavigate={(section) => {
-            if (section === 'buy') setAdminView('browse-buy');
-            else if (section === 'rent') setAdminView('browse-rent');
-          }} />
+          <PublicLanding
+            onShowAuth={() => {}}
+            onNavigate={(section) => {
+              if (section === 'buy') setAdminView('browse-buy');
+              else if (section === 'rent') setAdminView('browse-rent');
+            }}
+            user={user}
+            profile={profile}
+            onGoToPortal={() => setAdminView('dashboard')}
+            onSignOut={signOut}
+          />
         ) : adminView === 'browse-buy' ? (
           <PropertyBrowser section="buy" onBack={() => setAdminView('public-home')} onShowAuth={() => {}} />
         ) : adminView === 'browse-rent' ? (
