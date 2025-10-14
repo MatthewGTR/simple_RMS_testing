@@ -8,7 +8,7 @@ import { Dashboard } from './components/Dashboard'
 import { AdminDashboard } from './components/AdminDashboard'
 import { EnhancedAdminPanel } from './components/EnhancedAdminPanel'
 import { PropertyManagement } from './components/PropertyManagement'
-import { AgentDashboardNew as AgentDashboard } from './components/AgentDashboardNew'
+import { AgentDashboard } from './components/AgentDashboard'
 import { ConsumerDashboard } from './components/ConsumerDashboard'
 import { NotificationContainer } from './components/Notification'
 

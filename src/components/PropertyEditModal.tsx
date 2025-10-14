@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Upload, Trash2, Plus, MapPin, DollarSign, Home, Bed, Bath, Square, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { showNotification } from './Notification';
 
 interface Property {
   id?: string;
@@ -31,7 +32,6 @@ interface PropertyEditModalProps {
 
 export function PropertyEditModal({ property, onClose, onSave, agentId }: PropertyEditModalProps) {
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'basic' | 'details' | 'location' | 'images'>('basic');
 
   const [formData, setFormData] = useState<Property>({
@@ -145,27 +145,27 @@ export function PropertyEditModal({ property, onClose, onSave, agentId }: Proper
 
   const validateForm = (): boolean => {
     if (!formData.title.trim()) {
-      setMessage('Property title is required');
+      showNotification('error', 'Property title is required');
       setActiveTab('basic');
       return false;
     }
     if (!formData.description.trim()) {
-      setMessage('Property description is required');
+      showNotification('error', 'Property description is required');
       setActiveTab('basic');
       return false;
     }
     if (formData.price <= 0) {
-      setMessage('Valid price is required');
+      showNotification('error', 'Valid price is required');
       setActiveTab('basic');
       return false;
     }
     if (formData.sqft <= 0) {
-      setMessage('Valid square footage is required');
+      showNotification('error', 'Valid square footage is required');
       setActiveTab('details');
       return false;
     }
     if (!formData.address.trim() || !formData.city.trim()) {
-      setMessage('Complete address is required');
+      showNotification('error', 'Complete address is required');
       setActiveTab('location');
       return false;
     }
@@ -196,23 +196,36 @@ export function PropertyEditModal({ property, onClose, onSave, agentId }: Proper
           .eq('id', property.id);
 
         if (error) throw error;
-        setMessage('Property updated successfully!');
+        showNotification('success', 'Property updated successfully!');
       } else {
-        const { error } = await supabase
+        const { error: insertError } = await supabase
           .from('properties')
           .insert([propertyData]);
 
-        if (error) throw error;
-        setMessage('Property created successfully!');
+        if (insertError) throw insertError;
+
+        // Deduct listing credit for new property
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('listing_credits')
+          .eq('id', agentId)
+          .single();
+
+        if (profileData && profileData.listing_credits > 0) {
+          await supabase
+            .from('profiles')
+            .update({ listing_credits: profileData.listing_credits - 1 })
+            .eq('id', agentId);
+        }
+
+        showNotification('success', 'Property created successfully! Pending admin approval.');
       }
 
-      setTimeout(() => {
-        onSave();
-        onClose();
-      }, 1500);
+      onSave();
+      onClose();
     } catch (error: any) {
       console.error('Error saving property:', error);
-      setMessage(error.message || 'Failed to save property');
+      showNotification('error', error.message || 'Failed to save property');
     } finally {
       setLoading(false);
     }
@@ -635,15 +648,6 @@ export function PropertyEditModal({ property, onClose, onSave, agentId }: Proper
             {activeTab === 'images' && renderImages()}
           </div>
 
-          {message && (
-            <div className={`mx-6 mb-4 p-4 rounded-xl font-medium ${
-              message.includes('success')
-                ? 'bg-green-50 text-green-700 border-2 border-green-200'
-                : 'bg-red-50 text-red-700 border-2 border-red-200'
-            }`}>
-              {message}
-            </div>
-          )}
 
           <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
             <button
