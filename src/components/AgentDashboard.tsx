@@ -366,54 +366,68 @@ export function AgentDashboard() {
       {/* Header with Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Property Management</h1>
-          <p className="text-lg text-gray-600">Manage listings, track performance, and grow your business</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Property Management Dashboard</h1>
+          <p className="text-lg text-gray-600">Manage your portfolio, track performance metrics, and optimize your listings</p>
+          <p className="text-sm text-gray-500 mt-1">Last updated: {new Date().toLocaleString()}</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleRefresh}
+            className="flex items-center gap-2 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold"
+            title="Refresh data"
+          >
+            <RefreshCw className="w-5 h-5" />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
           <button
             onClick={handleAddProperty}
             disabled={stats.listingCredits <= 0}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:shadow-xl transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            title={stats.listingCredits <= 0 ? 'No listing credits available' : 'Create new property listing'}
           >
             <Plus className="w-5 h-5" />
-            Add Property
+            <span>Add Property</span>
+            <span className="hidden lg:inline text-xs opacity-90">({stats.listingCredits} credits)</span>
           </button>
         </div>
       </div>
 
-      {/* Stats Grid - Enhanced with 8 cards */}
+      {/* Stats Grid - Enhanced with descriptions */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group">
+        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group cursor-help" title="Total number of properties in your portfolio">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 bg-blue-100 rounded-lg group-hover:scale-110 transition-transform">
               <Building2 className="w-5 h-5 text-blue-600" />
             </div>
           </div>
-          <p className="text-xs font-semibold text-gray-600 mb-1">Total</p>
+          <p className="text-xs font-semibold text-gray-600 mb-1">Total Properties</p>
           <p className="text-2xl font-bold text-gray-900">{stats.totalProperties}</p>
+          <p className="text-xs text-gray-500 mt-1">All listings</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group">
+        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group cursor-help" title="Properties currently visible to buyers">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 bg-green-100 rounded-lg group-hover:scale-110 transition-transform">
               <CheckCircle className="w-5 h-5 text-green-600" />
             </div>
           </div>
-          <p className="text-xs font-semibold text-gray-600 mb-1">Active</p>
+          <p className="text-xs font-semibold text-gray-600 mb-1">Active Listings</p>
           <p className="text-2xl font-bold text-gray-900">{stats.activeListings}</p>
+          <p className="text-xs text-green-600 mt-1">Live now</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group">
+        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group cursor-help" title="Properties awaiting admin approval before going live">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 bg-yellow-100 rounded-lg group-hover:scale-110 transition-transform">
               <Clock className="w-5 h-5 text-yellow-600" />
             </div>
           </div>
-          <p className="text-xs font-semibold text-gray-600 mb-1">Pending</p>
+          <p className="text-xs font-semibold text-gray-600 mb-1">Pending Review</p>
           <p className="text-2xl font-bold text-gray-900">{stats.pendingListings}</p>
+          <p className="text-xs text-yellow-600 mt-1">In review</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group">
+        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group cursor-help" title="Properties temporarily hidden from public view">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 bg-gray-100 rounded-lg group-hover:scale-110 transition-transform">
               <EyeOff className="w-5 h-5 text-gray-600" />
@@ -421,9 +435,10 @@ export function AgentDashboard() {
           </div>
           <p className="text-xs font-semibold text-gray-600 mb-1">Inactive</p>
           <p className="text-2xl font-bold text-gray-900">{stats.inactiveListings}</p>
+          <p className="text-xs text-gray-500 mt-1">Not visible</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group">
+        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group cursor-help" title="Premium listings shown at top of search results">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 bg-orange-100 rounded-lg group-hover:scale-110 transition-transform">
               <Star className="w-5 h-5 text-orange-600" />
@@ -431,9 +446,10 @@ export function AgentDashboard() {
           </div>
           <p className="text-xs font-semibold text-gray-600 mb-1">Featured</p>
           <p className="text-2xl font-bold text-gray-900">{stats.featuredCount}</p>
+          <p className="text-xs text-orange-600 mt-1">Boosted</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group">
+        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group cursor-help" title="Total number of times your properties have been viewed">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 bg-purple-100 rounded-lg group-hover:scale-110 transition-transform">
               <Eye className="w-5 h-5 text-purple-600" />
@@ -441,26 +457,29 @@ export function AgentDashboard() {
           </div>
           <p className="text-xs font-semibold text-gray-600 mb-1">Total Views</p>
           <p className="text-2xl font-bold text-gray-900">{stats.totalViews}</p>
+          <p className="text-xs text-purple-600 mt-1">All time</p>
         </div>
 
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-xl p-4 text-white hover:shadow-2xl transition-all group">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-xl p-4 text-white hover:shadow-2xl transition-all group cursor-help" title="Credits available for creating new property listings">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
               <Home className="w-5 h-5 text-white" />
             </div>
           </div>
-          <p className="text-xs font-semibold text-blue-100 mb-1">List Credits</p>
+          <p className="text-xs font-semibold text-blue-100 mb-1">Listing Credits</p>
           <p className="text-2xl font-bold">{stats.listingCredits}</p>
+          <p className="text-xs text-blue-100 mt-1">Available</p>
         </div>
 
-        <div className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl shadow-xl p-4 text-white hover:shadow-2xl transition-all group">
+        <div className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl shadow-xl p-4 text-white hover:shadow-2xl transition-all group cursor-help" title="Credits available for featuring/boosting properties">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
               <Zap className="w-5 h-5 text-white" />
             </div>
           </div>
-          <p className="text-xs font-semibold text-yellow-100 mb-1">Boost Credits</p>
+          <p className="text-xs font-semibold text-yellow-100 mb-1">Boosting Credits</p>
           <p className="text-2xl font-bold">{stats.boostingCredits}</p>
+          <p className="text-xs text-yellow-100 mt-1">Available</p>
         </div>
       </div>
 
@@ -602,34 +621,50 @@ export function AgentDashboard() {
                             </span>
                           </div>
                           <div className="flex items-center gap-4 text-sm text-gray-600 mb-3 flex-wrap">
-                            <span className="flex items-center gap-1.5 capitalize font-medium">
+                            <span className="flex items-center gap-1.5 capitalize font-medium bg-gray-100 px-2 py-1 rounded">
                               <Building2 className="w-4 h-4" />
                               {property.property_type}
                             </span>
-                            <span className="flex items-center gap-1.5 font-medium">
+                            <span className="flex items-center gap-1.5 font-medium capitalize bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                              <DollarSign className="w-4 h-4" />
+                              For {property.listing_type}
+                            </span>
+                            <span className="flex items-center gap-1.5 font-medium bg-blue-100 text-blue-700 px-2 py-1 rounded">
                               <MapPin className="w-4 h-4" />
                               {property.city}, {property.state}
                             </span>
-                            <span className="flex items-center gap-1.5 font-medium">
+                            <span className="flex items-center gap-1.5 font-medium bg-green-100 text-green-700 px-2 py-1 rounded" title="Total views">
                               <Eye className="w-4 h-4" />
                               {property.views_count || 0} views
                             </span>
                           </div>
-                          <p className="text-gray-700 text-base mb-4 line-clamp-2">
+                          <p className="text-gray-700 text-base mb-3 line-clamp-2">
                             {property.description}
                           </p>
+                          <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
+                            <span title="Created date">
+                              Created: {new Date(property.created_at).toLocaleDateString()}
+                            </span>
+                            <span>•</span>
+                            <span title="Last updated">
+                              Updated: {new Date(property.updated_at).toLocaleDateString()}
+                            </span>
+                            {property.updated_at !== property.created_at && (
+                              <span className="text-blue-600 font-semibold">Recently modified</span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-6 text-sm text-gray-600">
-                            <span className="flex items-center gap-2">
+                            <span className="flex items-center gap-2" title="Bedrooms">
                               <Bed className="w-5 h-5" />
-                              <span className="font-semibold">{property.bedrooms}</span>
+                              <span className="font-semibold">{property.bedrooms} beds</span>
                             </span>
-                            <span className="flex items-center gap-2">
+                            <span className="flex items-center gap-2" title="Bathrooms">
                               <Bath className="w-5 h-5" />
-                              <span className="font-semibold">{property.bathrooms}</span>
+                              <span className="font-semibold">{property.bathrooms} baths</span>
                             </span>
-                            <span className="flex items-center gap-2">
+                            <span className="flex items-center gap-2" title="Square footage">
                               <Square className="w-5 h-5" />
-                              <span className="font-semibold">{property.sqft} sqft</span>
+                              <span className="font-semibold">{property.sqft.toLocaleString()} sqft</span>
                             </span>
                           </div>
                         </div>
@@ -637,11 +672,30 @@ export function AgentDashboard() {
 
                       {/* Action Buttons */}
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 border-t-2 border-gray-100 gap-4">
-                        <div>
-                          <p className="text-sm text-gray-600 mb-1">Price</p>
-                          <p className="text-3xl font-bold text-blue-600">
-                            RM {property.price.toLocaleString()}
-                          </p>
+                        <div className="flex-1">
+                          <div className="flex items-baseline gap-3 mb-2">
+                            <div>
+                              <p className="text-sm text-gray-600 mb-1">Listed Price</p>
+                              <p className="text-3xl font-bold text-blue-600">
+                                RM {property.price.toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              <span className="font-semibold">RM {(property.price / property.sqft).toFixed(0)}</span> per sqft
+                            </div>
+                          </div>
+                          {property.status === 'active' && property.views_count > 0 && (
+                            <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 px-2 py-1 rounded inline-flex">
+                              <TrendingUp className="w-3 h-3" />
+                              <span className="font-semibold">Active listing performing well</span>
+                            </div>
+                          )}
+                          {property.status === 'pending' && (
+                            <div className="flex items-center gap-2 text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded inline-flex">
+                              <Clock className="w-3 h-3" />
+                              <span className="font-semibold">Awaiting admin approval</span>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 flex-wrap">
@@ -649,20 +703,20 @@ export function AgentDashboard() {
                             onClick={() => handleEditProperty(property)}
                             disabled={actionLoading === property.id}
                             className="flex items-center gap-2 px-3 py-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-semibold disabled:opacity-50 text-sm"
-                            title="Edit Property"
+                            title="Edit property details, images, and pricing"
                           >
                             <Edit className="w-4 h-4" />
-                            Edit
+                            <span>Edit</span>
                           </button>
 
                           <button
                             onClick={() => handleDuplicateProperty(property)}
                             disabled={actionLoading === property.id || stats.listingCredits <= 0}
                             className="flex items-center gap-2 px-3 py-2 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition-colors font-semibold disabled:opacity-50 text-sm"
-                            title="Duplicate Property"
+                            title={stats.listingCredits <= 0 ? 'No listing credits available' : 'Create a copy of this property (uses 1 credit)'}
                           >
                             <Copy className="w-4 h-4" />
-                            Duplicate
+                            <span>Duplicate</span>
                           </button>
 
                           {property.status === 'active' && !property.is_featured && (
@@ -670,10 +724,10 @@ export function AgentDashboard() {
                               onClick={() => handleBoostProperty(property.id)}
                               disabled={actionLoading === property.id || stats.boostingCredits <= 0}
                               className="flex items-center gap-2 px-3 py-2 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors font-semibold disabled:opacity-50 text-sm"
-                              title="Boost Property"
+                              title={stats.boostingCredits <= 0 ? 'No boosting credits available' : 'Feature this property at top of search (uses 1 credit)'}
                             >
                               <Zap className="w-4 h-4" />
-                              Boost
+                              <span>Boost</span>
                             </button>
                           )}
 
@@ -685,20 +739,20 @@ export function AgentDashboard() {
                                 ? 'text-gray-700 bg-gray-100 hover:bg-gray-200'
                                 : 'text-green-700 bg-green-100 hover:bg-green-200'
                             }`}
-                            title={property.status === 'active' ? 'Deactivate' : 'Activate'}
+                            title={property.status === 'active' ? 'Hide property from public view' : 'Make property visible to buyers'}
                           >
                             <Power className="w-4 h-4" />
-                            {property.status === 'active' ? 'Deactivate' : 'Activate'}
+                            <span>{property.status === 'active' ? 'Deactivate' : 'Activate'}</span>
                           </button>
 
                           <button
                             onClick={() => setShowDeleteConfirm(property.id)}
                             disabled={actionLoading === property.id}
                             className="flex items-center gap-2 px-3 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors font-semibold disabled:opacity-50 text-sm"
-                            title="Delete Property"
+                            title="Permanently delete this property listing"
                           >
                             <Trash2 className="w-4 h-4" />
-                            Delete
+                            <span>Delete</span>
                           </button>
                         </div>
                       </div>
