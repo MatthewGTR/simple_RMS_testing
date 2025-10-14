@@ -1,15 +1,19 @@
 import React, { useState } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { Auth } from './components/Auth'
+import { LandingPage } from './components/LandingPage'
 import { Navigation } from './components/Navigation'
 import { Dashboard } from './components/Dashboard'
 import { AdminDashboard } from './components/AdminDashboard'
 import { EnhancedAdminPanel } from './components/EnhancedAdminPanel'
 import { PropertyManagement } from './components/PropertyManagement'
+import { AgentDashboard } from './components/AgentDashboard'
+import { ConsumerDashboard } from './components/ConsumerDashboard'
 
 function AppContent() {
   const { user, profile, loading, error } = useAuth()
   const [activeView, setActiveView] = useState<'dashboard' | 'admin-dashboard' | 'enhanced-admin' | 'properties'>('dashboard')
+  const [showAuth, setShowAuth] = useState(false)
 
   console.log('=== APP CONTENT RENDER ===')
   console.log('Loading:', loading)
@@ -43,29 +47,67 @@ function AppContent() {
   }
 
   if (!user) {
-    console.log('No user, showing auth')
-    return <Auth />
+    console.log('No user, showing landing or auth')
+    if (showAuth) {
+      return <Auth />
+    }
+    return <LandingPage onShowAuth={() => setShowAuth(true)} />
   }
 
   console.log('Showing main app')
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
+  const isAgent = profile?.user_type === 'agent'
+  const isConsumer = profile?.user_type === 'consumer'
+
+  if (isAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navigation activeView={activeView} onViewChange={setActiveView} />
+        <main className="py-8 px-4 sm:px-6 lg:px-8">
+          {activeView === 'dashboard' ? (
+            <Dashboard />
+          ) : activeView === 'admin-dashboard' ? (
+            <AdminDashboard onNavigate={setActiveView} />
+          ) : activeView === 'enhanced-admin' ? (
+            <EnhancedAdminPanel />
+          ) : activeView === 'properties' ? (
+            <PropertyManagement />
+          ) : (
+            <Dashboard />
+          )}
+        </main>
+      </div>
+    )
+  }
+
+  if (isAgent) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navigation activeView={activeView} onViewChange={setActiveView} />
+        <main className="py-8 px-4 sm:px-6 lg:px-8">
+          <AgentDashboard />
+        </main>
+      </div>
+    )
+  }
+
+  if (isConsumer) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navigation activeView={activeView} onViewChange={setActiveView} />
+        <main className="py-8 px-4 sm:px-6 lg:px-8">
+          <ConsumerDashboard />
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation activeView={activeView} onViewChange={setActiveView} />
       <main className="py-8 px-4 sm:px-6 lg:px-8">
-        {activeView === 'dashboard' ? (
-          <Dashboard />
-        ) : activeView === 'admin-dashboard' && isAdmin ? (
-          <AdminDashboard onNavigate={setActiveView} />
-        ) : activeView === 'enhanced-admin' && isAdmin ? (
-          <EnhancedAdminPanel />
-        ) : activeView === 'properties' && isAdmin ? (
-          <PropertyManagement />
-        ) : (
-          <Dashboard />
-        )}
+        <Dashboard />
       </main>
     </div>
   )
