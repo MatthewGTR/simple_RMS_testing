@@ -102,15 +102,20 @@ function AppContent() {
   console.log('Profile data:', profile)
   console.log('User type:', profile?.user_type)
   console.log('Role:', profile?.role)
+  console.log('REN Number:', profile?.ren_number)
+  console.log('REN Number exists?:', !!profile?.ren_number)
+  console.log('REN Number not empty?:', profile?.ren_number && profile.ren_number.trim() !== '')
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
   // Check if user is agent by user_type OR by having ren_number (agent-specific field)
   const isAgent = profile?.user_type === 'agent' || (profile?.ren_number && profile.ren_number.trim() !== '')
   const isConsumer = profile?.user_type === 'consumer'
 
+  console.log('=== ROLE DETECTION ===')
   console.log('isAdmin:', isAdmin)
   console.log('isAgent:', isAgent)
   console.log('isConsumer:', isConsumer)
+  console.log('Will render:', isAdmin ? 'ADMIN' : isAgent ? 'AGENT' : isConsumer ? 'CONSUMER' : 'DEFAULT')
 
   if (isAdmin) {
     return (

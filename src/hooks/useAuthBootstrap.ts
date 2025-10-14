@@ -8,6 +8,10 @@ type Profile = {
   full_name: string | null;
   role: string;
   credits: number | null;
+  user_type: string | null;
+  ren_number: string | null;
+  listing_credits: number | null;
+  boosting_credits: number | null;
 };
 
 export function useAuthBootstrap() {
@@ -39,7 +43,7 @@ export function useAuthBootstrap() {
 
         const { data: prof, error: pErr } = await supabase
           .from('profiles')
-          .select('id,email,full_name,role,credits')
+          .select('id,email,full_name,role,credits,user_type,ren_number,listing_credits,boosting_credits')
           .eq('id', user.id)
           .maybeSingle();
 
