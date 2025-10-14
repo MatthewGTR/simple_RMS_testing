@@ -348,19 +348,40 @@ export function PropertyEditModal({ property, templateProperty, onClose, onSave,
 
     setLoading(true);
     try {
-      const propertyData = {
-        ...formData,
-        agent_id: agentId,
+      const propertyData: any = {
+        title: formData.title,
+        description: formData.description,
+        property_type: formData.property_type,
+        listing_type: formData.listing_type,
         price: Number(formData.price),
         sqft: Number(formData.sqft),
         bedrooms: Number(formData.bedrooms),
         bathrooms: Number(formData.bathrooms),
         car_parks: Number(formData.car_parks || 0),
         land_area_sqft: Number(formData.land_area_sqft || 0),
-        build_year: Number(formData.build_year || new Date().getFullYear())
+        build_year: Number(formData.build_year || new Date().getFullYear()),
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        postal_code: formData.postal_code,
+        tenure_type: formData.tenure_type,
+        furnished: formData.furnished,
+        occupancy_status: formData.occupancy_status,
+        amenities: formData.amenities || [],
+        facilities: formData.facilities || '',
+        main_image_url: formData.main_image_url || '',
+        image_urls: formData.image_urls || [],
+        floor_level: formData.floor_level || '',
+        facing_direction: formData.facing_direction || '',
+        unit_number: formData.unit_number || '',
+        lot_number: formData.lot_number || '',
+        virtual_tour_url: formData.virtual_tour_url || '',
+        youtube_url: formData.youtube_url || '',
+        status: formData.status || 'draft'
       };
 
       if (property?.id) {
+        // For updates, don't include agent_id
         const { error } = await supabase
           .from('properties')
           .update(propertyData)
@@ -369,9 +390,11 @@ export function PropertyEditModal({ property, templateProperty, onClose, onSave,
         if (error) throw error;
         showNotification('success', 'Property updated successfully');
       } else {
+        // For inserts, include agent_id
+        const insertData = { ...propertyData, agent_id: agentId };
         const { error } = await supabase
           .from('properties')
-          .insert([propertyData]);
+          .insert([insertData]);
 
         if (error) throw error;
         showNotification('success', 'Property created successfully');
