@@ -5,9 +5,10 @@ import { DashboardSkeleton } from './LoadingSkeleton';
 import { PropertyEditModal } from './PropertyEditModal';
 import { showNotification } from './Notification';
 import {
-  Home, Plus, Edit, Trash2, Eye, Copy, Search, RefreshCw,
-  EyeOff, Power, Clock, MapPin, Bed, Bath, Square, Building2, Star, Zap,
-  CheckCircle, TrendingUp, DollarSign, ShoppingCart, HelpCircle, Info, Download
+  Home, Plus, Edit, Trash2, Eye, TrendingUp, DollarSign, Copy,
+  MessageSquare, BarChart3, AlertCircle, CheckCircle, Search, Filter,
+  ChevronDown, Building2, Star, Zap, MoreVertical, RefreshCw, X,
+  EyeOff, Power, Clock, MapPin, Bed, Bath, Square
 } from 'lucide-react';
 
 interface Property {
@@ -46,19 +47,13 @@ export function AgentDashboard() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-  const [showCreditRequest, setShowCreditRequest] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const [stats, setStats] = useState({
     totalProperties: 0,
     activeListings: 0,
     pendingListings: 0,
-    inactiveListings: 0,
-    soldListings: 0,
     totalViews: 0,
-    avgViews: 0,
-    featuredCount: 0,
     listingCredits: 0,
     boostingCredits: 0
   });
@@ -101,7 +96,7 @@ export function AgentDashboard() {
         .from('profiles')
         .select('listing_credits, boosting_credits')
         .eq('id', user?.id)
-        .maybeSingle();
+        .single();
 
       if (data) {
         setStats(prev => ({
@@ -119,21 +114,13 @@ export function AgentDashboard() {
     const totalViews = props.reduce((sum, p) => sum + (p.views_count || 0), 0);
     const active = props.filter(p => p.status === 'active').length;
     const pending = props.filter(p => p.status === 'pending').length;
-    const inactive = props.filter(p => p.status === 'inactive').length;
-    const sold = props.filter(p => p.status === 'sold').length;
-    const featured = props.filter(p => p.is_featured).length;
-    const avgViews = props.length > 0 ? Math.round(totalViews / props.length) : 0;
 
     setStats(prev => ({
       ...prev,
       totalProperties: props.length,
       activeListings: active,
       pendingListings: pending,
-      inactiveListings: inactive,
-      soldListings: sold,
-      totalViews,
-      avgViews,
-      featuredCount: featured
+      totalViews
     }));
   };
 
@@ -176,8 +163,7 @@ export function AgentDashboard() {
 
   const handleAddProperty = () => {
     if (stats.listingCredits <= 0) {
-      showNotification('warning', 'You need listing credits to create a property.');
-      setShowCreditRequest(true);
+      showNotification('warning', 'You need listing credits to create a property. Please contact admin.');
       return;
     }
     setSelectedProperty(null);
@@ -191,8 +177,7 @@ export function AgentDashboard() {
 
   const handleDuplicateProperty = async (property: Property) => {
     if (stats.listingCredits <= 0) {
-      showNotification('warning', 'You need listing credits to duplicate a property.');
-      setShowCreditRequest(true);
+      showNotification('warning', 'You need listing credits to duplicate a property. Please contact admin.');
       return;
     }
 
@@ -270,8 +255,7 @@ export function AgentDashboard() {
 
   const handleBoostProperty = async (propertyId: string) => {
     if (stats.boostingCredits <= 0) {
-      showNotification('warning', 'You need boosting credits to feature a property.');
-      setShowCreditRequest(true);
+      showNotification('warning', 'You need boosting credits to feature a property. Please contact admin.');
       return;
     }
 
@@ -291,7 +275,7 @@ export function AgentDashboard() {
 
       if (creditError) throw creditError;
 
-      showNotification('success', 'Property boosted! It will appear as featured.');
+      showNotification('success', 'Property boosted successfully! It will now appear as featured.');
       await loadProperties();
       await loadCredits();
     } catch (error: any) {
@@ -314,7 +298,7 @@ export function AgentDashboard() {
 
       if (error) throw error;
 
-      showNotification('success', `Property ${newStatus === 'active' ? 'activated' : 'deactivated'}!`);
+      showNotification('success', `Property ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully!`);
       await loadProperties();
     } catch (error: any) {
       console.error('Error updating status:', error);
@@ -368,147 +352,84 @@ export function AgentDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
-      {/* Header with Actions */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Property Management</h1>
-          <p className="text-lg text-gray-600">Manage listings, track performance, and grow your business</p>
+          <p className="text-lg text-gray-600">Manage your property listings and track performance</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowHelp(true)}
-            className="flex items-center gap-2 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold"
-            title="Help & Guide"
-          >
-            <HelpCircle className="w-5 h-5" />
-            <span className="hidden sm:inline">Help</span>
-          </button>
-          <button
-            onClick={() => setShowCreditRequest(true)}
-            className="flex items-center gap-2 px-4 py-3 border-2 border-blue-300 text-blue-700 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors font-semibold"
-            title="Request Credits"
-          >
-            <ShoppingCart className="w-5 h-5" />
-            <span className="hidden sm:inline">Get Credits</span>
-          </button>
-          <button
-            onClick={handleAddProperty}
-            disabled={stats.listingCredits <= 0}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:shadow-xl transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Plus className="w-5 h-5" />
-            Add Property
-          </button>
-        </div>
+        <button
+          onClick={handleAddProperty}
+          disabled={stats.listingCredits <= 0}
+          className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:shadow-xl transition-all font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Plus className="w-6 h-6" />
+          Add Property
+        </button>
       </div>
 
-      {/* Stats Grid - Enhanced with 8 cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-blue-100 rounded-lg group-hover:scale-110 transition-transform">
-              <Building2 className="w-5 h-5 text-blue-600" />
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+        <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-100 p-6 hover:shadow-lg transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-blue-100 rounded-xl group-hover:scale-110 transition-transform">
+              <Building2 className="w-7 h-7 text-blue-600" />
             </div>
           </div>
-          <p className="text-xs font-semibold text-gray-600 mb-1">Total</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.totalProperties}</p>
+          <p className="text-sm font-semibold text-gray-600 mb-1">Total Properties</p>
+          <p className="text-3xl font-bold text-gray-900">{stats.totalProperties}</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-green-100 rounded-lg group-hover:scale-110 transition-transform">
-              <CheckCircle className="w-5 h-5 text-green-600" />
+        <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-100 p-6 hover:shadow-lg transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-green-100 rounded-xl group-hover:scale-110 transition-transform">
+              <CheckCircle className="w-7 h-7 text-green-600" />
             </div>
           </div>
-          <p className="text-xs font-semibold text-gray-600 mb-1">Active</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.activeListings}</p>
+          <p className="text-sm font-semibold text-gray-600 mb-1">Active Listings</p>
+          <p className="text-3xl font-bold text-gray-900">{stats.activeListings}</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-yellow-100 rounded-lg group-hover:scale-110 transition-transform">
-              <Clock className="w-5 h-5 text-yellow-600" />
+        <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-100 p-6 hover:shadow-lg transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-yellow-100 rounded-xl group-hover:scale-110 transition-transform">
+              <Clock className="w-7 h-7 text-yellow-600" />
             </div>
           </div>
-          <p className="text-xs font-semibold text-gray-600 mb-1">Pending</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.pendingListings}</p>
+          <p className="text-sm font-semibold text-gray-600 mb-1">Pending</p>
+          <p className="text-3xl font-bold text-gray-900">{stats.pendingListings}</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-gray-100 rounded-lg group-hover:scale-110 transition-transform">
-              <EyeOff className="w-5 h-5 text-gray-600" />
+        <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-100 p-6 hover:shadow-lg transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-purple-100 rounded-xl group-hover:scale-110 transition-transform">
+              <Eye className="w-7 h-7 text-purple-600" />
             </div>
           </div>
-          <p className="text-xs font-semibold text-gray-600 mb-1">Inactive</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.inactiveListings}</p>
+          <p className="text-sm font-semibold text-gray-600 mb-1">Total Views</p>
+          <p className="text-3xl font-bold text-gray-900">{stats.totalViews.toLocaleString()}</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-orange-100 rounded-lg group-hover:scale-110 transition-transform">
-              <Star className="w-5 h-5 text-orange-600" />
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-xl p-6 text-white hover:shadow-2xl transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-white/20 rounded-xl group-hover:scale-110 transition-transform">
+              <Home className="w-7 h-7 text-white" />
             </div>
           </div>
-          <p className="text-xs font-semibold text-gray-600 mb-1">Featured</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.featuredCount}</p>
+          <p className="text-sm font-semibold text-blue-100 mb-1">Listing Credits</p>
+          <p className="text-3xl font-bold">{stats.listingCredits}</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-purple-100 rounded-lg group-hover:scale-110 transition-transform">
-              <Eye className="w-5 h-5 text-purple-600" />
+        <div className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl shadow-xl p-6 text-white hover:shadow-2xl transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-white/20 rounded-xl group-hover:scale-110 transition-transform">
+              <Zap className="w-7 h-7 text-white" />
             </div>
           </div>
-          <p className="text-xs font-semibold text-gray-600 mb-1">Total Views</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.totalViews}</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-xl p-4 text-white hover:shadow-2xl transition-all group">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
-              <Home className="w-5 h-5 text-white" />
-            </div>
-          </div>
-          <p className="text-xs font-semibold text-blue-100 mb-1">List Credits</p>
-          <p className="text-2xl font-bold">{stats.listingCredits}</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl shadow-xl p-4 text-white hover:shadow-2xl transition-all group">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
-          </div>
-          <p className="text-xs font-semibold text-yellow-100 mb-1">Boost Credits</p>
-          <p className="text-2xl font-bold">{stats.boostingCredits}</p>
+          <p className="text-sm font-semibold text-yellow-100 mb-1">Boost Credits</p>
+          <p className="text-3xl font-bold">{stats.boostingCredits}</p>
         </div>
       </div>
-
-      {/* Quick Actions Info Banner */}
-      {(stats.listingCredits === 0 || stats.boostingCredits === 0) && (
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <Info className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-blue-900 mb-2">Need Credits?</h3>
-              <p className="text-blue-700 mb-4">
-                {stats.listingCredits === 0 && 'You need listing credits to post new properties. '}
-                {stats.boostingCredits === 0 && 'You need boosting credits to feature your listings. '}
-                Contact an administrator to purchase more credits.
-              </p>
-              <button
-                onClick={() => setShowCreditRequest(true)}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
-              >
-                Request Credits Now
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Filters and Search */}
       <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-100">
@@ -518,17 +439,17 @@ export function AgentDashboard() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by title, location, or type..."
+                placeholder="Search properties by title, location, or type..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
               />
             </div>
 
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-6 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-medium min-w-[160px]"
+              className="px-6 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium min-w-[180px]"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -540,18 +461,18 @@ export function AgentDashboard() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-6 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-medium min-w-[180px]"
+              className="px-6 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium min-w-[200px]"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
-              <option value="price_high">Price: High → Low</option>
-              <option value="price_low">Price: Low → High</option>
+              <option value="price_high">Price: High to Low</option>
+              <option value="price_low">Price: Low to High</option>
               <option value="views">Most Viewed</option>
             </select>
 
             <button
               onClick={() => { loadProperties(); loadCredits(); }}
-              className="px-6 py-3 border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+              className="px-6 py-4 border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
               title="Refresh"
             >
               <RefreshCw className="w-5 h-5 text-gray-600" />
@@ -569,10 +490,10 @@ export function AgentDashboard() {
               <h3 className="text-2xl font-bold text-gray-900 mb-3">
                 {properties.length === 0 ? 'No properties yet' : 'No properties found'}
               </h3>
-              <p className="text-gray-600 mb-8 text-lg max-w-md mx-auto">
+              <p className="text-gray-600 mb-8 text-lg">
                 {properties.length === 0
-                  ? 'Start growing your real estate portfolio by adding your first property listing'
-                  : 'Try adjusting your search or filters to find what you\'re looking for'}
+                  ? "Start by adding your first property listing"
+                  : 'Try adjusting your search or filters'}
               </p>
               {properties.length === 0 && (
                 <button
@@ -593,9 +514,9 @@ export function AgentDashboard() {
                   className="group border-2 border-gray-200 rounded-2xl p-6 hover:border-blue-300 hover:shadow-xl transition-all duration-300 animate-slide-up"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
-                  <div className="flex flex-col lg:flex-row gap-6">
+                  <div className="flex gap-6">
                     {/* Property Image */}
-                    <div className="w-full lg:w-64 h-48 flex-shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+                    <div className="w-64 h-48 flex-shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
                       {property.main_image_url ? (
                         <img
                           src={property.main_image_url}
@@ -614,16 +535,16 @@ export function AgentDashboard() {
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1 min-w-0 pr-4">
                           <div className="flex items-center gap-3 mb-3 flex-wrap">
-                            <h3 className="text-2xl font-bold text-gray-900">
+                            <h3 className="text-2xl font-bold text-gray-900 truncate">
                               {property.title}
                             </h3>
                             {property.is_featured && (
-                              <span className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-full text-sm font-bold shadow-lg">
+                              <span className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-full text-sm font-bold shadow-lg">
                                 <Star className="w-4 h-4 fill-current" />
                                 Featured
                               </span>
                             )}
-                            <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold border-2 ${getStatusColor(property.status)}`}>
+                            <span className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold border-2 ${getStatusColor(property.status)}`}>
                               {getStatusIcon(property.status)}
                               {property.status.toUpperCase()}
                             </span>
@@ -663,7 +584,7 @@ export function AgentDashboard() {
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 border-t-2 border-gray-100 gap-4">
+                      <div className="flex items-center justify-between pt-4 border-t-2 border-gray-100">
                         <div>
                           <p className="text-sm text-gray-600 mb-1">Price</p>
                           <p className="text-3xl font-bold text-blue-600">
@@ -671,61 +592,63 @@ export function AgentDashboard() {
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-3">
                           <button
                             onClick={() => handleEditProperty(property)}
                             disabled={actionLoading === property.id}
-                            className="flex items-center gap-2 px-3 py-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-semibold disabled:opacity-50 text-sm"
+                            className="flex items-center gap-2 px-4 py-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-semibold disabled:opacity-50"
                             title="Edit Property"
                           >
-                            <Edit className="w-4 h-4" />
-                            Edit
+                            <Edit className="w-5 h-5" />
+                            <span className="hidden sm:inline">Edit</span>
                           </button>
 
                           <button
                             onClick={() => handleDuplicateProperty(property)}
                             disabled={actionLoading === property.id || stats.listingCredits <= 0}
-                            className="flex items-center gap-2 px-3 py-2 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition-colors font-semibold disabled:opacity-50 text-sm"
+                            className="flex items-center gap-2 px-4 py-2.5 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition-colors font-semibold disabled:opacity-50"
                             title="Duplicate Property"
                           >
-                            <Copy className="w-4 h-4" />
-                            Duplicate
+                            <Copy className="w-5 h-5" />
+                            <span className="hidden sm:inline">Duplicate</span>
                           </button>
 
                           {property.status === 'active' && !property.is_featured && (
                             <button
                               onClick={() => handleBoostProperty(property.id)}
                               disabled={actionLoading === property.id || stats.boostingCredits <= 0}
-                              className="flex items-center gap-2 px-3 py-2 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors font-semibold disabled:opacity-50 text-sm"
-                              title="Boost Property"
+                              className="flex items-center gap-2 px-4 py-2.5 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors font-semibold disabled:opacity-50"
+                              title="Boost Property (Feature it)"
                             >
-                              <Zap className="w-4 h-4" />
-                              Boost
+                              <Zap className="w-5 h-5" />
+                              <span className="hidden sm:inline">Boost</span>
                             </button>
                           )}
 
                           <button
                             onClick={() => handleToggleStatus(property)}
                             disabled={actionLoading === property.id}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition-colors disabled:opacity-50 text-sm ${
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold transition-colors disabled:opacity-50 ${
                               property.status === 'active'
                                 ? 'text-gray-700 bg-gray-100 hover:bg-gray-200'
                                 : 'text-green-700 bg-green-100 hover:bg-green-200'
                             }`}
                             title={property.status === 'active' ? 'Deactivate' : 'Activate'}
                           >
-                            <Power className="w-4 h-4" />
-                            {property.status === 'active' ? 'Deactivate' : 'Activate'}
+                            <Power className="w-5 h-5" />
+                            <span className="hidden sm:inline">
+                              {property.status === 'active' ? 'Deactivate' : 'Activate'}
+                            </span>
                           </button>
 
                           <button
                             onClick={() => setShowDeleteConfirm(property.id)}
                             disabled={actionLoading === property.id}
-                            className="flex items-center gap-2 px-3 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors font-semibold disabled:opacity-50 text-sm"
+                            className="flex items-center gap-2 px-4 py-2.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors font-semibold disabled:opacity-50"
                             title="Delete Property"
                           >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
+                            <Trash2 className="w-5 h-5" />
+                            <span className="hidden sm:inline">Delete</span>
                           </button>
                         </div>
                       </div>
@@ -738,7 +661,7 @@ export function AgentDashboard() {
         </div>
       </div>
 
-      {/* Property Edit Modal */}
+      {/* Edit Modal */}
       {showEditModal && (
         <PropertyEditModal
           property={selectedProperty}
@@ -762,7 +685,7 @@ export function AgentDashboard() {
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">Delete Property?</h3>
               <p className="text-gray-600 mb-8 text-lg">
-                This action cannot be undone. The property listing will be permanently removed.
+                This action cannot be undone. The property listing will be permanently deleted.
               </p>
               <div className="flex gap-4">
                 <button
@@ -781,128 +704,6 @@ export function AgentDashboard() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Credit Request Modal */}
-      {showCreditRequest && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full animate-scale-in">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <ShoppingCart className="w-10 h-10 text-blue-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">Request Credits</h3>
-              <div className="text-left bg-gray-50 rounded-xl p-6 mb-6 space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-gray-700">Current Listing Credits:</span>
-                  <span className="text-2xl font-bold text-blue-600">{stats.listingCredits}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-gray-700">Current Boosting Credits:</span>
-                  <span className="text-2xl font-bold text-orange-600">{stats.boostingCredits}</span>
-                </div>
-              </div>
-              <p className="text-gray-600 mb-8 text-lg">
-                To purchase more credits, please contact an administrator. They will add credits to your account based on your subscription plan.
-              </p>
-              <button
-                onClick={() => setShowCreditRequest(false)}
-                className="w-full px-6 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold"
-              >
-                Got It
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Help Modal */}
-      {showHelp && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full my-8 animate-scale-in">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-3xl font-bold text-gray-900">Agent Dashboard Guide</h3>
-              <button
-                onClick={() => setShowHelp(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-6 h-6 text-gray-600" />
-              </button>
-            </div>
-
-            <div className="space-y-6 text-left">
-              <div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-blue-600" />
-                  Adding Properties
-                </h4>
-                <p className="text-gray-700">
-                  Click the "Add Property" button to create a new listing. Each property creation uses 1 listing credit. Fill in all required details including title, description, price, location, and upload images.
-                </p>
-              </div>
-
-              <div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <Edit className="w-5 h-5 text-blue-600" />
-                  Editing Properties
-                </h4>
-                <p className="text-gray-700">
-                  Click "Edit" on any property card to modify its details. You can update information, change images, or adjust pricing anytime without using additional credits.
-                </p>
-              </div>
-
-              <div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-yellow-600" />
-                  Boosting Properties
-                </h4>
-                <p className="text-gray-700">
-                  Boost active properties to feature them prominently. Featured listings appear at the top of search results with a special badge. Each boost uses 1 boosting credit.
-                </p>
-              </div>
-
-              <div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5 text-green-600" />
-                  Managing Credits
-                </h4>
-                <p className="text-gray-700">
-                  Monitor your credits in the stats dashboard. When you run low, click "Get Credits" to request more from administrators. Credits are based on your subscription plan.
-                </p>
-              </div>
-
-              <div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <Power className="w-5 h-5 text-gray-600" />
-                  Property Status
-                </h4>
-                <ul className="text-gray-700 space-y-2">
-                  <li><strong className="text-green-600">Active:</strong> Property is live and visible to buyers</li>
-                  <li><strong className="text-yellow-600">Pending:</strong> Awaiting admin approval</li>
-                  <li><strong className="text-gray-600">Inactive:</strong> Hidden from public view</li>
-                  <li><strong className="text-blue-600">Sold:</strong> Property has been sold</li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-purple-600" />
-                  Tracking Performance
-                </h4>
-                <p className="text-gray-700">
-                  View counts show how many times each property has been viewed. Use this data to understand which listings are getting the most attention and optimize your strategy.
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowHelp(false)}
-              className="w-full mt-8 px-6 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold"
-            >
-              Got It, Thanks!
-            </button>
           </div>
         </div>
       )}
