@@ -841,17 +841,29 @@ export function AgentDashboard() {
 
                     {/* Content */}
                     <div className="p-4">
+                      {/* Price - Top Priority */}
                       <div className="mb-3">
-                        <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1">
-                          {property.title}
-                        </h3>
-                        <div className="flex items-center text-sm text-gray-500">
-                          <MapPin className="w-4 h-4 mr-1" />
-                          {property.city}, {property.state}
-                        </div>
+                        <p className="text-2xl font-bold text-gray-900">
+                          RM {property.price.toLocaleString()}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          RM {(property.price / property.sqft).toFixed(0)}/sqft
+                        </p>
                       </div>
 
-                      <div className="flex items-center gap-4 mb-4 text-sm text-gray-600">
+                      {/* Title */}
+                      <h3 className="text-base font-semibold text-gray-900 mb-2 line-clamp-2">
+                        {property.title}
+                      </h3>
+
+                      {/* Location */}
+                      <div className="flex items-center text-sm text-gray-600 mb-3">
+                        <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                        <span className="line-clamp-1">{property.city}, {property.state}</span>
+                      </div>
+
+                      {/* Property Details */}
+                      <div className="flex items-center gap-4 text-sm text-gray-600 pb-3 border-b border-gray-100">
                         <div className="flex items-center gap-1">
                           <Bed className="w-4 h-4" />
                           <span>{property.bedrooms}</span>
@@ -866,14 +878,11 @@ export function AgentDashboard() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                        <div>
-                          <p className="text-xl font-bold text-gray-900">
-                            RM {property.price.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            RM {(property.price / property.sqft).toFixed(0)}/sqft
-                          </p>
+                      {/* Stats Row */}
+                      <div className="flex items-center justify-between pt-3">
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <span className="px-2 py-1 bg-gray-100 rounded">{property.property_type}</span>
+                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">{property.listing_type}</span>
                         </div>
                         <div className="flex items-center gap-1 text-sm text-gray-500">
                           <Eye className="w-4 h-4" />
