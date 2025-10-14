@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { DashboardSkeleton } from './LoadingSkeleton';
 import {
   Home, Plus, Edit, Trash2, Eye, TrendingUp, DollarSign,
   MessageSquare, BarChart3, AlertCircle, CheckCircle
@@ -180,8 +181,12 @@ export function AgentDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <div className="h-8 w-64 bg-gray-200 rounded shimmer mb-2"></div>
+          <div className="h-4 w-96 bg-gray-200 rounded shimmer"></div>
+        </div>
+        <DashboardSkeleton />
       </div>
     );
   }

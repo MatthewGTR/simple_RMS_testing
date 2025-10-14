@@ -39,7 +39,7 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
     try {
       const { data, error } = await supabase
         .from('properties')
-        .select('id, title, price, city, state, bedrooms, bathrooms, sqft, property_type, listing_type, is_featured, is_premium')
+        .select('id, title, price, city, state, bedrooms, bathrooms, sqft, property_type, listing_type, is_featured, is_premium, main_image_url')
         .eq('status', 'active')
         .or('is_featured.eq.true,is_premium.eq.true')
         .limit(6);
@@ -219,7 +219,8 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
                     placeholder="Search by location, property name, or keyword..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-14 pr-4 py-4 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                    className="w-full pl-14 pr-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   />
                 </div>
                 <button
@@ -255,8 +256,8 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg">
+            <div className="text-center group animate-slide-up" style={{ animationDelay: '0.1s' }}>
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
                 <Shield className="w-10 h-10 text-white" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Verified Listings</h3>
@@ -265,8 +266,8 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
               </p>
             </div>
 
-            <div className="text-center">
-              <div className="bg-gradient-to-br from-green-500 to-green-600 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg">
+            <div className="text-center group animate-slide-up" style={{ animationDelay: '0.2s' }}>
+              <div className="bg-gradient-to-br from-green-500 to-green-600 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
                 <Users className="w-10 h-10 text-white" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Trusted Agents</h3>
@@ -275,8 +276,8 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
               </p>
             </div>
 
-            <div className="text-center">
-              <div className="bg-gradient-to-br from-orange-500 to-orange-600 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg">
+            <div className="text-center group animate-slide-up" style={{ animationDelay: '0.3s' }}>
+              <div className="bg-gradient-to-br from-orange-500 to-orange-600 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
                 <TrendingUp className="w-10 h-10 text-white" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Market Insights</h3>
@@ -285,8 +286,8 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
               </p>
             </div>
 
-            <div className="text-center">
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg">
+            <div className="text-center group animate-slide-up" style={{ animationDelay: '0.4s' }}>
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
                 <Clock className="w-10 h-10 text-white" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">24/7 Support</h3>
@@ -332,15 +333,33 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
                   onClick={() => onShowAuth('signin')}
                   className="group bg-white rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer border border-gray-100"
                 >
-                  <div className="relative h-56 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center overflow-hidden">
-                    <Building2 className="w-20 h-20 text-gray-400 group-hover:scale-110 transition-transform" />
-                    <button className="absolute top-4 right-4 p-2.5 bg-white rounded-full hover:bg-red-50 transition-colors shadow-lg">
-                      <Heart className="w-5 h-5 text-gray-600" />
+                  <div className="relative h-56 overflow-hidden">
+                    {property.main_image_url ? (
+                      <img
+                        src={property.main_image_url}
+                        alt={property.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                        <Building2 className="w-20 h-20 text-gray-400 group-hover:scale-110 transition-transform" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <button className="absolute top-4 right-4 p-2.5 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-all shadow-lg transform hover:scale-110">
+                      <Heart className="w-5 h-5 text-gray-600 hover:text-red-500 transition-colors" />
                     </button>
-                    <div className="absolute top-4 left-4">
-                      <span className="px-4 py-1.5 bg-blue-600 text-white text-sm font-bold rounded-full shadow-lg">
+                    <div className="absolute top-4 left-4 flex gap-2">
+                      <span className="px-4 py-1.5 bg-blue-600/90 backdrop-blur-sm text-white text-sm font-bold rounded-full shadow-lg">
                         {property.listing_type === 'sale' ? 'For Sale' : 'For Rent'}
                       </span>
+                      {property.is_featured && (
+                        <span className="px-4 py-1.5 bg-yellow-500/90 backdrop-blur-sm text-white text-sm font-bold rounded-full shadow-lg flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-current" />
+                          Featured
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="p-6">

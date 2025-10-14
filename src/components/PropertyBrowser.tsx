@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { PropertyGridSkeleton } from './LoadingSkeleton';
 import {
   Search, Filter, MapPin, Home, Bed, Bath, Square, Heart, X,
   Building2, DollarSign, ArrowLeft, Phone, Mail, User, ChevronDown,
@@ -338,10 +339,7 @@ export function PropertyBrowser({ section, onBack, onShowAuth }: PropertyBrowser
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {loading ? (
-          <div className="text-center py-20">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600 font-medium text-lg">Loading properties...</p>
-          </div>
+          <PropertyGridSkeleton count={9} />
         ) : filteredProperties.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl shadow-sm">
             <Home className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -350,27 +348,46 @@ export function PropertyBrowser({ section, onBack, onShowAuth }: PropertyBrowser
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProperties.map((property) => (
+            {filteredProperties.map((property, index) => (
               <div
                 key={property.id}
                 onClick={() => setSelectedProperty(property)}
-                className="group bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100"
+                className="group bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 animate-slide-up hover-lift"
+                style={{ animationDelay: `${index * 0.05}s` }}
               >
-                <div className="relative h-56 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center overflow-hidden">
-                  <Building2 className="w-20 h-20 text-gray-400 group-hover:scale-110 transition-transform" />
+                <div className="relative h-56 overflow-hidden">
+                  {property.main_image_url ? (
+                    <img
+                      src={property.main_image_url}
+                      alt={property.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                      <Building2 className="w-20 h-20 text-gray-400 group-hover:scale-110 transition-transform" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onShowAuth('signin');
                     }}
-                    className="absolute top-4 right-4 p-2.5 bg-white rounded-full hover:bg-red-50 transition-colors shadow-lg"
+                    className="absolute top-4 right-4 p-2.5 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-all shadow-lg transform hover:scale-110"
                   >
-                    <Heart className="w-5 h-5 text-gray-600" />
+                    <Heart className="w-5 h-5 text-gray-600 hover:text-red-500 transition-colors" />
                   </button>
-                  <div className="absolute top-4 left-4">
-                    <span className="px-4 py-1.5 bg-blue-600 text-white text-sm font-bold rounded-full shadow-lg capitalize">
+                  <div className="absolute top-4 left-4 flex gap-2">
+                    <span className="px-4 py-1.5 bg-blue-600/90 backdrop-blur-sm text-white text-sm font-bold rounded-full shadow-lg capitalize">
                       For {property.listing_type}
                     </span>
+                    {property.is_featured && (
+                      <span className="px-4 py-1.5 bg-yellow-500/90 backdrop-blur-sm text-white text-sm font-bold rounded-full shadow-lg flex items-center gap-1">
+                        <Star className="w-3 h-3 fill-current" />
+                        Featured
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="p-6">
