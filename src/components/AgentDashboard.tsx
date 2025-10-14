@@ -7,7 +7,7 @@ import { showNotification } from './Notification';
 import {
   Home, Plus, Edit, Trash2, Eye, Copy, Search, RefreshCw,
   EyeOff, Power, Clock, MapPin, Bed, Bath, Square, Building2, Star, Zap,
-  CheckCircle, TrendingUp, DollarSign, ShoppingCart, HelpCircle, Info, Download
+  CheckCircle, TrendingUp, DollarSign, Info, Download
 } from 'lucide-react';
 
 interface Property {
@@ -46,8 +46,6 @@ export function AgentDashboard() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-  const [showCreditRequest, setShowCreditRequest] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const [stats, setStats] = useState({
@@ -177,7 +175,6 @@ export function AgentDashboard() {
   const handleAddProperty = () => {
     if (stats.listingCredits <= 0) {
       showNotification('warning', 'You need listing credits to create a property.');
-      setShowCreditRequest(true);
       return;
     }
     setSelectedProperty(null);
@@ -192,7 +189,6 @@ export function AgentDashboard() {
   const handleDuplicateProperty = async (property: Property) => {
     if (stats.listingCredits <= 0) {
       showNotification('warning', 'You need listing credits to duplicate a property.');
-      setShowCreditRequest(true);
       return;
     }
 
@@ -271,7 +267,6 @@ export function AgentDashboard() {
   const handleBoostProperty = async (propertyId: string) => {
     if (stats.boostingCredits <= 0) {
       showNotification('warning', 'You need boosting credits to feature a property.');
-      setShowCreditRequest(true);
       return;
     }
 
@@ -376,22 +371,6 @@ export function AgentDashboard() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowHelp(true)}
-            className="flex items-center gap-2 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold"
-            title="Help & Guide"
-          >
-            <HelpCircle className="w-5 h-5" />
-            <span className="hidden sm:inline">Help</span>
-          </button>
-          <button
-            onClick={() => setShowCreditRequest(true)}
-            className="flex items-center gap-2 px-4 py-3 border-2 border-blue-300 text-blue-700 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors font-semibold"
-            title="Request Credits"
-          >
-            <ShoppingCart className="w-5 h-5" />
-            <span className="hidden sm:inline">Get Credits</span>
-          </button>
-          <button
             onClick={handleAddProperty}
             disabled={stats.listingCredits <= 0}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:shadow-xl transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed"
@@ -494,17 +473,11 @@ export function AgentDashboard() {
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-bold text-blue-900 mb-2">Need Credits?</h3>
-              <p className="text-blue-700 mb-4">
+              <p className="text-blue-700">
                 {stats.listingCredits === 0 && 'You need listing credits to post new properties. '}
                 {stats.boostingCredits === 0 && 'You need boosting credits to feature your listings. '}
                 Contact an administrator to purchase more credits.
               </p>
-              <button
-                onClick={() => setShowCreditRequest(true)}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
-              >
-                Request Credits Now
-              </button>
             </div>
           </div>
         </div>
@@ -781,128 +754,6 @@ export function AgentDashboard() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Credit Request Modal */}
-      {showCreditRequest && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full animate-scale-in">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <ShoppingCart className="w-10 h-10 text-blue-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">Request Credits</h3>
-              <div className="text-left bg-gray-50 rounded-xl p-6 mb-6 space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-gray-700">Current Listing Credits:</span>
-                  <span className="text-2xl font-bold text-blue-600">{stats.listingCredits}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-gray-700">Current Boosting Credits:</span>
-                  <span className="text-2xl font-bold text-orange-600">{stats.boostingCredits}</span>
-                </div>
-              </div>
-              <p className="text-gray-600 mb-8 text-lg">
-                To purchase more credits, please contact an administrator. They will add credits to your account based on your subscription plan.
-              </p>
-              <button
-                onClick={() => setShowCreditRequest(false)}
-                className="w-full px-6 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold"
-              >
-                Got It
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Help Modal */}
-      {showHelp && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full my-8 animate-scale-in">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-3xl font-bold text-gray-900">Agent Dashboard Guide</h3>
-              <button
-                onClick={() => setShowHelp(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-6 h-6 text-gray-600" />
-              </button>
-            </div>
-
-            <div className="space-y-6 text-left">
-              <div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-blue-600" />
-                  Adding Properties
-                </h4>
-                <p className="text-gray-700">
-                  Click the "Add Property" button to create a new listing. Each property creation uses 1 listing credit. Fill in all required details including title, description, price, location, and upload images.
-                </p>
-              </div>
-
-              <div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <Edit className="w-5 h-5 text-blue-600" />
-                  Editing Properties
-                </h4>
-                <p className="text-gray-700">
-                  Click "Edit" on any property card to modify its details. You can update information, change images, or adjust pricing anytime without using additional credits.
-                </p>
-              </div>
-
-              <div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-yellow-600" />
-                  Boosting Properties
-                </h4>
-                <p className="text-gray-700">
-                  Boost active properties to feature them prominently. Featured listings appear at the top of search results with a special badge. Each boost uses 1 boosting credit.
-                </p>
-              </div>
-
-              <div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5 text-green-600" />
-                  Managing Credits
-                </h4>
-                <p className="text-gray-700">
-                  Monitor your credits in the stats dashboard. When you run low, click "Get Credits" to request more from administrators. Credits are based on your subscription plan.
-                </p>
-              </div>
-
-              <div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <Power className="w-5 h-5 text-gray-600" />
-                  Property Status
-                </h4>
-                <ul className="text-gray-700 space-y-2">
-                  <li><strong className="text-green-600">Active:</strong> Property is live and visible to buyers</li>
-                  <li><strong className="text-yellow-600">Pending:</strong> Awaiting admin approval</li>
-                  <li><strong className="text-gray-600">Inactive:</strong> Hidden from public view</li>
-                  <li><strong className="text-blue-600">Sold:</strong> Property has been sold</li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-purple-600" />
-                  Tracking Performance
-                </h4>
-                <p className="text-gray-700">
-                  View counts show how many times each property has been viewed. Use this data to understand which listings are getting the most attention and optimize your strategy.
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowHelp(false)}
-              className="w-full mt-8 px-6 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold"
-            >
-              Got It, Thanks!
-            </button>
           </div>
         </div>
       )}
