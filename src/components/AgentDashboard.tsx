@@ -7,7 +7,7 @@ import { showNotification } from './Notification';
 import {
   Home, Plus, Edit, Trash2, Eye, Copy, Search, RefreshCw,
   EyeOff, Power, Clock, MapPin, Bed, Bath, Square, Building2, Star, Zap,
-  CheckCircle, TrendingUp, DollarSign, Info, Download
+  CheckCircle, TrendingUp, DollarSign, Filter, LayoutGrid, List, AlertCircle
 } from 'lucide-react';
 
 interface Property {
@@ -47,16 +47,15 @@ export function AgentDashboard() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
   const [stats, setStats] = useState({
     totalProperties: 0,
     activeListings: 0,
     pendingListings: 0,
     inactiveListings: 0,
-    soldListings: 0,
-    totalViews: 0,
-    avgViews: 0,
     featuredCount: 0,
+    totalViews: 0,
     listingCredits: 0,
     boostingCredits: 0
   });
@@ -64,7 +63,6 @@ export function AgentDashboard() {
   useEffect(() => {
     if (user) {
       loadProperties();
-      loadCredits();
     }
   }, [user]);
 
@@ -74,65 +72,46 @@ export function AgentDashboard() {
 
   const loadProperties = async () => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase
+      const { data: propertiesData, error: propertiesError } = await supabase
         .from('properties')
         .select('*')
         .eq('agent_id', user?.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (propertiesError) throw propertiesError;
 
-      setProperties(data || []);
-      calculateStats(data || []);
-    } catch (error) {
-      console.error('Error loading properties:', error);
-      showNotification('error', 'Failed to load properties. Please refresh the page.');
-    } finally {
-      setLoading(false);
-    }
-  };
+      setProperties(propertiesData || []);
 
-  const loadCredits = async () => {
-    try {
-      const { data } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('listing_credits, boosting_credits')
         .eq('id', user?.id)
-        .maybeSingle();
+        .single();
 
-      if (data) {
-        setStats(prev => ({
-          ...prev,
-          listingCredits: data.listing_credits || 0,
-          boostingCredits: data.boosting_credits || 0
-        }));
-      }
-    } catch (error) {
-      console.error('Error loading credits:', error);
+      if (profileError) throw profileError;
+
+      const activeCount = propertiesData?.filter(p => p.status === 'active').length || 0;
+      const pendingCount = propertiesData?.filter(p => p.status === 'pending').length || 0;
+      const inactiveCount = propertiesData?.filter(p => p.status === 'inactive').length || 0;
+      const featuredCount = propertiesData?.filter(p => p.is_featured).length || 0;
+      const totalViews = propertiesData?.reduce((sum, p) => sum + (p.views_count || 0), 0) || 0;
+
+      setStats({
+        totalProperties: propertiesData?.length || 0,
+        activeListings: activeCount,
+        pendingListings: pendingCount,
+        inactiveListings: inactiveCount,
+        featuredCount,
+        totalViews,
+        listingCredits: profileData?.listing_credits || 0,
+        boostingCredits: profileData?.boosting_credits || 0
+      });
+    } catch (error: any) {
+      console.error('Error loading properties:', error);
+      showNotification('error', 'Failed to load properties');
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const calculateStats = (props: Property[]) => {
-    const totalViews = props.reduce((sum, p) => sum + (p.views_count || 0), 0);
-    const active = props.filter(p => p.status === 'active').length;
-    const pending = props.filter(p => p.status === 'pending').length;
-    const inactive = props.filter(p => p.status === 'inactive').length;
-    const sold = props.filter(p => p.status === 'sold').length;
-    const featured = props.filter(p => p.is_featured).length;
-    const avgViews = props.length > 0 ? Math.round(totalViews / props.length) : 0;
-
-    setStats(prev => ({
-      ...prev,
-      totalProperties: props.length,
-      activeListings: active,
-      pendingListings: pending,
-      inactiveListings: inactive,
-      soldListings: sold,
-      totalViews,
-      avgViews,
-      featuredCount: featured
-    }));
   };
 
   const filterAndSortProperties = () => {
@@ -143,8 +122,8 @@ export function AgentDashboard() {
       filtered = filtered.filter(p =>
         p.title.toLowerCase().includes(query) ||
         p.city.toLowerCase().includes(query) ||
-        p.property_type.toLowerCase().includes(query) ||
-        p.address.toLowerCase().includes(query)
+        p.state.toLowerCase().includes(query) ||
+        p.property_type.toLowerCase().includes(query)
       );
     }
 
@@ -200,71 +179,22 @@ export function AgentDashboard() {
 
     setActionLoading(property.id);
     try {
-      const { title, description, property_type, listing_type, price, bedrooms, bathrooms, sqft, address, city, state, postal_code, main_image_url, image_urls, amenities } = property;
-
-      const newProperty = {
-        title: `${title} (Copy)`,
-        description,
-        property_type,
-        listing_type,
-        price,
-        bedrooms,
-        bathrooms,
-        sqft,
-        address,
-        city,
-        state,
-        postal_code,
-        main_image_url,
-        image_urls,
-        amenities,
-        agent_id: user?.id,
+      const { id, created_at, updated_at, ...propertyData } = property;
+      const duplicateData = {
+        ...propertyData,
+        title: `${property.title} (Copy)`,
         status: 'pending',
-        views_count: 0,
         is_featured: false,
-        is_premium: false
+        views_count: 0
       };
 
-      const { error: insertError } = await supabase
-        .from('properties')
-        .insert([newProperty]);
-
-      if (insertError) throw insertError;
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ listing_credits: stats.listingCredits - 1 })
-        .eq('id', user?.id);
-
-      if (updateError) throw updateError;
-
-      showNotification('success', 'Property duplicated successfully!');
-      await loadProperties();
-      await loadCredits();
-    } catch (error: any) {
-      console.error('Error duplicating property:', error);
-      showNotification('error', error.message || 'Failed to duplicate property');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleDeleteProperty = async (id: string) => {
-    setActionLoading(id);
-    try {
-      const { error } = await supabase
-        .from('properties')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('properties').insert([duplicateData]);
       if (error) throw error;
 
-      showNotification('success', 'Property deleted successfully!');
-      setShowDeleteConfirm(null);
-      await loadProperties();
+      showNotification('success', 'Property duplicated successfully!');
+      loadProperties();
     } catch (error: any) {
-      console.error('Error deleting property:', error);
-      showNotification('error', error.message || 'Failed to delete property');
+      showNotification('error', error.message || 'Failed to duplicate property');
     } finally {
       setActionLoading(null);
     }
@@ -278,12 +208,12 @@ export function AgentDashboard() {
 
     setActionLoading(propertyId);
     try {
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from('properties')
         .update({ is_featured: true })
         .eq('id', propertyId);
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
       const { error: creditError } = await supabase
         .from('profiles')
@@ -292,11 +222,9 @@ export function AgentDashboard() {
 
       if (creditError) throw creditError;
 
-      showNotification('success', 'Property boosted! It will appear as featured.');
-      await loadProperties();
-      await loadCredits();
+      showNotification('success', 'Property featured successfully!');
+      loadProperties();
     } catch (error: any) {
-      console.error('Error boosting property:', error);
       showNotification('error', error.message || 'Failed to boost property');
     } finally {
       setActionLoading(null);
@@ -304,10 +232,9 @@ export function AgentDashboard() {
   };
 
   const handleToggleStatus = async (property: Property) => {
-    const newStatus = property.status === 'active' ? 'inactive' : 'active';
     setActionLoading(property.id);
-
     try {
+      const newStatus = property.status === 'active' ? 'inactive' : 'active';
       const { error } = await supabase
         .from('properties')
         .update({ status: newStatus })
@@ -315,504 +242,517 @@ export function AgentDashboard() {
 
       if (error) throw error;
 
-      showNotification('success', `Property ${newStatus === 'active' ? 'activated' : 'deactivated'}!`);
-      await loadProperties();
+      showNotification('success', `Property ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully!`);
+      loadProperties();
     } catch (error: any) {
-      console.error('Error updating status:', error);
       showNotification('error', error.message || 'Failed to update property status');
     } finally {
       setActionLoading(null);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-700 border-green-200';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'inactive':
-        return 'bg-gray-100 text-gray-700 border-gray-200';
-      case 'sold':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
+  const handleDeleteProperty = async (propertyId: string) => {
+    setActionLoading(propertyId);
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .delete()
+        .eq('id', propertyId);
+
+      if (error) throw error;
+
+      showNotification('success', 'Property deleted successfully!');
+      loadProperties();
+      setShowDeleteConfirm(null);
+    } catch (error: any) {
+      showNotification('error', error.message || 'Failed to delete property');
+    } finally {
+      setActionLoading(null);
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <CheckCircle className="w-4 h-4" />;
-      case 'pending':
-        return <Clock className="w-4 h-4" />;
-      case 'inactive':
-        return <EyeOff className="w-4 h-4" />;
-      case 'sold':
-        return <DollarSign className="w-4 h-4" />;
-      default:
-        return null;
-    }
+  const getStatusBadge = (status: string) => {
+    const styles = {
+      active: 'bg-green-100 text-green-700 border-green-300',
+      pending: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+      inactive: 'bg-gray-100 text-gray-700 border-gray-300',
+      draft: 'bg-blue-100 text-blue-700 border-blue-300'
+    };
+    return styles[status as keyof typeof styles] || styles.draft;
   };
 
   if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <div className="h-8 w-64 bg-gray-200 rounded shimmer mb-2"></div>
-          <div className="h-4 w-96 bg-gray-200 rounded shimmer"></div>
-        </div>
-        <DashboardSkeleton />
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
-      {/* Header with Actions */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Property Management Dashboard</h1>
-          <p className="text-lg text-gray-600">Manage your portfolio, track performance metrics, and optimize your listings</p>
-          <p className="text-sm text-gray-500 mt-1">Last updated: {new Date().toLocaleString()}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleRefresh}
-            className="flex items-center gap-2 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold"
-            title="Refresh data"
-          >
-            <RefreshCw className="w-5 h-5" />
-            <span className="hidden sm:inline">Refresh</span>
-          </button>
-          <button
-            onClick={handleAddProperty}
-            disabled={stats.listingCredits <= 0}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:shadow-xl transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-            title={stats.listingCredits <= 0 ? 'No listing credits available' : 'Create new property listing'}
-          >
-            <Plus className="w-5 h-5" />
-            <span>Add Property</span>
-            <span className="hidden lg:inline text-xs opacity-90">({stats.listingCredits} credits)</span>
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-      {/* Stats Grid - Enhanced with descriptions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group cursor-help" title="Total number of properties in your portfolio">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-blue-100 rounded-lg group-hover:scale-110 transition-transform">
-              <Building2 className="w-5 h-5 text-blue-600" />
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Portfolio Dashboard</h1>
+              <p className="text-gray-600 text-lg">Manage and optimize your property listings</p>
             </div>
-          </div>
-          <p className="text-xs font-semibold text-gray-600 mb-1">Total Properties</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.totalProperties}</p>
-          <p className="text-xs text-gray-500 mt-1">All listings</p>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group cursor-help" title="Properties currently visible to buyers">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-green-100 rounded-lg group-hover:scale-110 transition-transform">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-            </div>
-          </div>
-          <p className="text-xs font-semibold text-gray-600 mb-1">Active Listings</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.activeListings}</p>
-          <p className="text-xs text-green-600 mt-1">Live now</p>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group cursor-help" title="Properties awaiting admin approval before going live">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-yellow-100 rounded-lg group-hover:scale-110 transition-transform">
-              <Clock className="w-5 h-5 text-yellow-600" />
-            </div>
-          </div>
-          <p className="text-xs font-semibold text-gray-600 mb-1">Pending Review</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.pendingListings}</p>
-          <p className="text-xs text-yellow-600 mt-1">In review</p>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group cursor-help" title="Properties temporarily hidden from public view">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-gray-100 rounded-lg group-hover:scale-110 transition-transform">
-              <EyeOff className="w-5 h-5 text-gray-600" />
-            </div>
-          </div>
-          <p className="text-xs font-semibold text-gray-600 mb-1">Inactive</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.inactiveListings}</p>
-          <p className="text-xs text-gray-500 mt-1">Not visible</p>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group cursor-help" title="Premium listings shown at top of search results">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-orange-100 rounded-lg group-hover:scale-110 transition-transform">
-              <Star className="w-5 h-5 text-orange-600" />
-            </div>
-          </div>
-          <p className="text-xs font-semibold text-gray-600 mb-1">Featured</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.featuredCount}</p>
-          <p className="text-xs text-orange-600 mt-1">Boosted</p>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border-2 border-gray-100 p-4 hover:shadow-lg transition-all group cursor-help" title="Total number of times your properties have been viewed">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-purple-100 rounded-lg group-hover:scale-110 transition-transform">
-              <Eye className="w-5 h-5 text-purple-600" />
-            </div>
-          </div>
-          <p className="text-xs font-semibold text-gray-600 mb-1">Total Views</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.totalViews}</p>
-          <p className="text-xs text-purple-600 mt-1">All time</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-xl p-4 text-white hover:shadow-2xl transition-all group cursor-help" title="Credits available for creating new property listings">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
-              <Home className="w-5 h-5 text-white" />
-            </div>
-          </div>
-          <p className="text-xs font-semibold text-blue-100 mb-1">Listing Credits</p>
-          <p className="text-2xl font-bold">{stats.listingCredits}</p>
-          <p className="text-xs text-blue-100 mt-1">Available</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl shadow-xl p-4 text-white hover:shadow-2xl transition-all group cursor-help" title="Credits available for featuring/boosting properties">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
-          </div>
-          <p className="text-xs font-semibold text-yellow-100 mb-1">Boosting Credits</p>
-          <p className="text-2xl font-bold">{stats.boostingCredits}</p>
-          <p className="text-xs text-yellow-100 mt-1">Available</p>
-        </div>
-      </div>
-
-      {/* Quick Actions Info Banner */}
-      {(stats.listingCredits === 0 || stats.boostingCredits === 0) && (
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <Info className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-blue-900 mb-2">Need Credits?</h3>
-              <p className="text-blue-700">
-                {stats.listingCredits === 0 && 'You need listing credits to post new properties. '}
-                {stats.boostingCredits === 0 && 'You need boosting credits to feature your listings. '}
-                Contact an administrator to purchase more credits.
-              </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={handleRefresh}
+                className="px-5 py-2.5 bg-white border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all font-semibold shadow-sm hover:shadow flex items-center gap-2"
+              >
+                <RefreshCw className="w-5 h-5" />
+                Refresh
+              </button>
+              <button
+                onClick={handleAddProperty}
+                disabled={stats.listingCredits <= 0}
+                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Add Property
+                <span className="ml-1 px-2 py-0.5 bg-white/20 rounded text-sm">
+                  {stats.listingCredits}
+                </span>
+              </button>
             </div>
           </div>
         </div>
-      )}
 
-      {/* Filters and Search */}
-      <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-100">
-        <div className="p-6 border-b-2 border-gray-100">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2.5 bg-blue-50 rounded-xl">
+                <Building2 className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-1 font-medium">Total</p>
+            <p className="text-3xl font-bold text-gray-900">{stats.totalProperties}</p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2.5 bg-green-50 rounded-xl">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-1 font-medium">Active</p>
+            <p className="text-3xl font-bold text-green-600">{stats.activeListings}</p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2.5 bg-yellow-50 rounded-xl">
+                <Clock className="w-6 h-6 text-yellow-600" />
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-1 font-medium">Pending</p>
+            <p className="text-3xl font-bold text-yellow-600">{stats.pendingListings}</p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2.5 bg-gray-50 rounded-xl">
+                <EyeOff className="w-6 h-6 text-gray-600" />
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-1 font-medium">Inactive</p>
+            <p className="text-3xl font-bold text-gray-600">{stats.inactiveListings}</p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2.5 bg-orange-50 rounded-xl">
+                <Star className="w-6 h-6 text-orange-600" />
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-1 font-medium">Featured</p>
+            <p className="text-3xl font-bold text-orange-600">{stats.featuredCount}</p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2.5 bg-purple-50 rounded-xl">
+                <Eye className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-1 font-medium">Views</p>
+            <p className="text-3xl font-bold text-purple-600">{stats.totalViews}</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl shadow-lg p-5 text-white hover:shadow-xl transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2.5 bg-white/20 rounded-xl">
+                <Home className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <p className="text-sm text-blue-100 mb-1 font-medium">List Credits</p>
+            <p className="text-3xl font-bold">{stats.listingCredits}</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl shadow-lg p-5 text-white hover:shadow-xl transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2.5 bg-white/20 rounded-xl">
+                <Zap className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <p className="text-sm text-yellow-100 mb-1 font-medium">Boost Credits</p>
+            <p className="text-3xl font-bold">{stats.boostingCredits}</p>
+          </div>
+        </div>
+
+        {/* Filters and Search */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
           <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by title, location, or type..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by title, location, or type..."
+                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                />
+              </div>
             </div>
 
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-6 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-medium min-w-[160px]"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="inactive">Inactive</option>
-              <option value="sold">Sold</option>
-            </select>
+            <div className="flex flex-wrap gap-3">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-semibold bg-white"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="pending">Pending</option>
+                <option value="inactive">Inactive</option>
+              </select>
 
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-6 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-medium min-w-[180px]"
-            >
-              <option value="newest">Newest First</option>
-              <option value="oldest">Oldest First</option>
-              <option value="price_high">Price: High → Low</option>
-              <option value="price_low">Price: Low → High</option>
-              <option value="views">Most Viewed</option>
-            </select>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-semibold bg-white"
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="price_high">Price: High to Low</option>
+                <option value="price_low">Price: Low to High</option>
+                <option value="views">Most Viewed</option>
+              </select>
 
-            <button
-              onClick={() => { loadProperties(); loadCredits(); }}
-              className="px-6 py-3 border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
-              title="Refresh"
-            >
-              <RefreshCw className="w-5 h-5 text-gray-600" />
-            </button>
+              <div className="flex gap-2 bg-gray-100 rounded-xl p-1">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`px-4 py-2 rounded-lg transition-all ${
+                    viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'
+                  }`}
+                >
+                  <List className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`px-4 py-2 rounded-lg transition-all ${
+                    viewMode === 'grid' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'
+                  }`}
+                >
+                  <LayoutGrid className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Properties List */}
-        <div className="p-6">
-          {filteredProperties.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Building2 className="w-12 h-12 text-gray-400" />
+        {filteredProperties.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-16 text-center">
+            <div className="max-w-md mx-auto">
+              <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Building2 className="w-10 h-10 text-blue-600" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">
                 {properties.length === 0 ? 'No properties yet' : 'No properties found'}
               </h3>
-              <p className="text-gray-600 mb-8 text-lg max-w-md mx-auto">
+              <p className="text-gray-600 mb-8 text-lg">
                 {properties.length === 0
-                  ? 'Start growing your real estate portfolio by adding your first property listing'
-                  : 'Try adjusting your search or filters to find what you\'re looking for'}
+                  ? 'Start building your portfolio by adding your first property listing'
+                  : 'Try adjusting your filters or search terms'}
               </p>
               {properties.length === 0 && (
                 <button
                   onClick={handleAddProperty}
                   disabled={stats.listingCredits <= 0}
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:shadow-xl transition-all font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-3"
                 >
                   <Plus className="w-6 h-6" />
                   Add Your First Property
                 </button>
               )}
             </div>
-          ) : (
-            <div className="space-y-6">
-              {filteredProperties.map((property, index) => (
-                <div
-                  key={property.id}
-                  className="group border-2 border-gray-200 rounded-2xl p-6 hover:border-blue-300 hover:shadow-xl transition-all duration-300 animate-slide-up"
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Property Image */}
-                    <div className="w-full lg:w-64 h-48 flex-shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
-                      {property.main_image_url ? (
-                        <img
-                          src={property.main_image_url}
-                          alt={property.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Building2 className="w-16 h-16 text-gray-400" />
+          </div>
+        ) : viewMode === 'list' ? (
+          <div className="space-y-4">
+            {filteredProperties.map((property) => (
+              <div
+                key={property.id}
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-all overflow-hidden"
+              >
+                <div className="flex flex-col md:flex-row">
+                  {/* Image */}
+                  <div className="w-full md:w-72 h-48 flex-shrink-0 bg-gradient-to-br from-gray-100 to-gray-200 relative overflow-hidden">
+                    {property.main_image_url ? (
+                      <img
+                        src={property.main_image_url}
+                        alt={property.title}
+                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Building2 className="w-16 h-16 text-gray-400" />
+                      </div>
+                    )}
+                    {property.is_featured && (
+                      <div className="absolute top-3 left-3 bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg flex items-center gap-1.5">
+                        <Star className="w-4 h-4 fill-current" />
+                        Featured
+                      </div>
+                    )}
+                    <div className={`absolute top-3 right-3 px-3 py-1.5 rounded-lg text-sm font-bold border ${getStatusBadge(property.status)}`}>
+                      {property.status.toUpperCase()}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1 min-w-0 pr-4">
+                        <h3 className="text-2xl font-bold text-gray-900 mb-2">{property.title}</h3>
+                        <div className="flex flex-wrap items-center gap-3 mb-3">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">
+                            <Building2 className="w-4 h-4" />
+                            {property.property_type}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium capitalize">
+                            <DollarSign className="w-4 h-4" />
+                            For {property.listing_type}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium">
+                            <MapPin className="w-4 h-4" />
+                            {property.city}, {property.state}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
+                            <Eye className="w-4 h-4" />
+                            {property.views_count || 0} views
+                          </span>
                         </div>
-                      )}
+                        <p className="text-gray-700 mb-4 line-clamp-2">{property.description}</p>
+                        <div className="flex items-center gap-6 text-gray-600 mb-4">
+                          <span className="flex items-center gap-2">
+                            <Bed className="w-5 h-5" />
+                            <span className="font-semibold">{property.bedrooms}</span>
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <Bath className="w-5 h-5" />
+                            <span className="font-semibold">{property.bathrooms}</span>
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <Square className="w-5 h-5" />
+                            <span className="font-semibold">{property.sqft.toLocaleString()} sqft</span>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-600 mb-1">Price</p>
+                        <p className="text-3xl font-bold text-blue-600">
+                          RM {property.price.toLocaleString()}
+                        </p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          RM {(property.price / property.sqft).toFixed(0)}/sqft
+                        </p>
+                      </div>
                     </div>
 
-                    {/* Property Details */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1 min-w-0 pr-4">
-                          <div className="flex items-center gap-3 mb-3 flex-wrap">
-                            <h3 className="text-2xl font-bold text-gray-900">
-                              {property.title}
-                            </h3>
-                            {property.is_featured && (
-                              <span className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-full text-sm font-bold shadow-lg">
-                                <Star className="w-4 h-4 fill-current" />
-                                Featured
-                              </span>
-                            )}
-                            <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold border-2 ${getStatusColor(property.status)}`}>
-                              {getStatusIcon(property.status)}
-                              {property.status.toUpperCase()}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm text-gray-600 mb-3 flex-wrap">
-                            <span className="flex items-center gap-1.5 capitalize font-medium bg-gray-100 px-2 py-1 rounded">
-                              <Building2 className="w-4 h-4" />
-                              {property.property_type}
-                            </span>
-                            <span className="flex items-center gap-1.5 font-medium capitalize bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                              <DollarSign className="w-4 h-4" />
-                              For {property.listing_type}
-                            </span>
-                            <span className="flex items-center gap-1.5 font-medium bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                              <MapPin className="w-4 h-4" />
-                              {property.city}, {property.state}
-                            </span>
-                            <span className="flex items-center gap-1.5 font-medium bg-green-100 text-green-700 px-2 py-1 rounded" title="Total views">
-                              <Eye className="w-4 h-4" />
-                              {property.views_count || 0} views
-                            </span>
-                          </div>
-                          <p className="text-gray-700 text-base mb-3 line-clamp-2">
-                            {property.description}
-                          </p>
-                          <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
-                            <span title="Created date">
-                              Created: {new Date(property.created_at).toLocaleDateString()}
-                            </span>
-                            <span>•</span>
-                            <span title="Last updated">
-                              Updated: {new Date(property.updated_at).toLocaleDateString()}
-                            </span>
-                            {property.updated_at !== property.created_at && (
-                              <span className="text-blue-600 font-semibold">Recently modified</span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-6 text-sm text-gray-600">
-                            <span className="flex items-center gap-2" title="Bedrooms">
-                              <Bed className="w-5 h-5" />
-                              <span className="font-semibold">{property.bedrooms} beds</span>
-                            </span>
-                            <span className="flex items-center gap-2" title="Bathrooms">
-                              <Bath className="w-5 h-5" />
-                              <span className="font-semibold">{property.bathrooms} baths</span>
-                            </span>
-                            <span className="flex items-center gap-2" title="Square footage">
-                              <Square className="w-5 h-5" />
-                              <span className="font-semibold">{property.sqft.toLocaleString()} sqft</span>
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 border-t-2 border-gray-100 gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-baseline gap-3 mb-2">
-                            <div>
-                              <p className="text-sm text-gray-600 mb-1">Listed Price</p>
-                              <p className="text-3xl font-bold text-blue-600">
-                                RM {property.price.toLocaleString()}
-                              </p>
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              <span className="font-semibold">RM {(property.price / property.sqft).toFixed(0)}</span> per sqft
-                            </div>
-                          </div>
-                          {property.status === 'active' && property.views_count > 0 && (
-                            <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 px-2 py-1 rounded inline-flex">
-                              <TrendingUp className="w-3 h-3" />
-                              <span className="font-semibold">Active listing performing well</span>
-                            </div>
-                          )}
-                          {property.status === 'pending' && (
-                            <div className="flex items-center gap-2 text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded inline-flex">
-                              <Clock className="w-3 h-3" />
-                              <span className="font-semibold">Awaiting admin approval</span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button
-                            onClick={() => handleEditProperty(property)}
-                            disabled={actionLoading === property.id}
-                            className="flex items-center gap-2 px-3 py-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-semibold disabled:opacity-50 text-sm"
-                            title="Edit property details, images, and pricing"
-                          >
-                            <Edit className="w-4 h-4" />
-                            <span>Edit</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleDuplicateProperty(property)}
-                            disabled={actionLoading === property.id || stats.listingCredits <= 0}
-                            className="flex items-center gap-2 px-3 py-2 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition-colors font-semibold disabled:opacity-50 text-sm"
-                            title={stats.listingCredits <= 0 ? 'No listing credits available' : 'Create a copy of this property (uses 1 credit)'}
-                          >
-                            <Copy className="w-4 h-4" />
-                            <span>Duplicate</span>
-                          </button>
-
-                          {property.status === 'active' && !property.is_featured && (
-                            <button
-                              onClick={() => handleBoostProperty(property.id)}
-                              disabled={actionLoading === property.id || stats.boostingCredits <= 0}
-                              className="flex items-center gap-2 px-3 py-2 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors font-semibold disabled:opacity-50 text-sm"
-                              title={stats.boostingCredits <= 0 ? 'No boosting credits available' : 'Feature this property at top of search (uses 1 credit)'}
-                            >
-                              <Zap className="w-4 h-4" />
-                              <span>Boost</span>
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => handleToggleStatus(property)}
-                            disabled={actionLoading === property.id}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition-colors disabled:opacity-50 text-sm ${
-                              property.status === 'active'
-                                ? 'text-gray-700 bg-gray-100 hover:bg-gray-200'
-                                : 'text-green-700 bg-green-100 hover:bg-green-200'
-                            }`}
-                            title={property.status === 'active' ? 'Hide property from public view' : 'Make property visible to buyers'}
-                          >
-                            <Power className="w-4 h-4" />
-                            <span>{property.status === 'active' ? 'Deactivate' : 'Activate'}</span>
-                          </button>
-
-                          <button
-                            onClick={() => setShowDeleteConfirm(property.id)}
-                            disabled={actionLoading === property.id}
-                            className="flex items-center gap-2 px-3 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors font-semibold disabled:opacity-50 text-sm"
-                            title="Permanently delete this property listing"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            <span>Delete</span>
-                          </button>
-                        </div>
-                      </div>
+                    {/* Actions */}
+                    <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-gray-100">
+                      <button
+                        onClick={() => handleEditProperty(property)}
+                        disabled={actionLoading === property.id}
+                        className="px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors font-semibold text-sm inline-flex items-center gap-2"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDuplicateProperty(property)}
+                        disabled={actionLoading === property.id || stats.listingCredits <= 0}
+                        className="px-4 py-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-colors font-semibold text-sm inline-flex items-center gap-2"
+                      >
+                        <Copy className="w-4 h-4" />
+                        Duplicate
+                      </button>
+                      {property.status === 'active' && !property.is_featured && (
+                        <button
+                          onClick={() => handleBoostProperty(property.id)}
+                          disabled={actionLoading === property.id || stats.boostingCredits <= 0}
+                          className="px-4 py-2 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-lg transition-colors font-semibold text-sm inline-flex items-center gap-2"
+                        >
+                          <Zap className="w-4 h-4" />
+                          Boost
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleToggleStatus(property)}
+                        disabled={actionLoading === property.id}
+                        className={`px-4 py-2 rounded-lg font-semibold text-sm inline-flex items-center gap-2 transition-colors ${
+                          property.status === 'active'
+                            ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            : 'bg-green-100 text-green-700 hover:bg-green-200'
+                        }`}
+                      >
+                        <Power className="w-4 h-4" />
+                        {property.status === 'active' ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(property.id)}
+                        disabled={actionLoading === property.id}
+                        className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors font-semibold text-sm inline-flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete
+                      </button>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProperties.map((property) => (
+              <div
+                key={property.id}
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-all overflow-hidden"
+              >
+                <div className="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200">
+                  {property.main_image_url ? (
+                    <img
+                      src={property.main_image_url}
+                      alt={property.title}
+                      className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Building2 className="w-16 h-16 text-gray-400" />
+                    </div>
+                  )}
+                  {property.is_featured && (
+                    <div className="absolute top-3 left-3 bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg flex items-center gap-1.5">
+                      <Star className="w-4 h-4 fill-current" />
+                      Featured
+                    </div>
+                  )}
+                  <div className={`absolute top-3 right-3 px-3 py-1.5 rounded-lg text-sm font-bold border ${getStatusBadge(property.status)}`}>
+                    {property.status.toUpperCase()}
+                  </div>
+                </div>
+
+                <div className="p-5">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">{property.title}</h3>
+                  <div className="flex items-center gap-2 mb-3 text-sm">
+                    <MapPin className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-600">{property.city}, {property.state}</span>
+                  </div>
+                  <p className="text-gray-700 mb-4 line-clamp-2 text-sm">{property.description}</p>
+
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                    <div className="flex items-center gap-4 text-gray-600 text-sm">
+                      <span className="flex items-center gap-1">
+                        <Bed className="w-4 h-4" />
+                        {property.bedrooms}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Bath className="w-4 h-4" />
+                        {property.bathrooms}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Square className="w-4 h-4" />
+                        {property.sqft}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-2xl font-bold text-blue-600">
+                      RM {property.price.toLocaleString()}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      RM {(property.price / property.sqft).toFixed(0)}/sqft
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEditProperty(property)}
+                      className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors font-semibold text-sm"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(property.id)}
+                      className="px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors font-semibold text-sm"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Property Edit Modal */}
+      {/* Edit Modal */}
       {showEditModal && (
         <PropertyEditModal
           property={selectedProperty}
-          onClose={() => setShowEditModal(false)}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedProperty(null);
+          }}
           onSave={() => {
             loadProperties();
-            loadCredits();
             setShowEditModal(false);
+            setSelectedProperty(null);
           }}
           agentId={user?.id || ''}
         />
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full animate-scale-in">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Trash2 className="w-10 h-10 text-red-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">Delete Property?</h3>
-              <p className="text-gray-600 mb-8 text-lg">
-                This action cannot be undone. The property listing will be permanently removed.
-              </p>
-              <div className="flex gap-4">
-                <button
-                  onClick={() => setShowDeleteConfirm(null)}
-                  disabled={actionLoading !== null}
-                  className="flex-1 px-6 py-4 border-2 border-gray-300 rounded-xl font-bold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleDeleteProperty(showDeleteConfirm)}
-                  disabled={actionLoading !== null}
-                  className="flex-1 px-6 py-4 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-bold disabled:opacity-50"
-                >
-                  {actionLoading === showDeleteConfirm ? 'Deleting...' : 'Delete'}
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3 text-center">Delete Property?</h3>
+            <p className="text-gray-600 mb-8 text-center">
+              This action cannot be undone. Are you sure you want to delete this property?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteProperty(showDeleteConfirm)}
+                className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-semibold"
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>
