@@ -40,12 +40,13 @@ interface Property {
 
 interface PropertyEditModalProps {
   property?: Property | null;
+  templateProperty?: Property | null;
   onClose: () => void;
   onSave: () => void;
   agentId: string;
 }
 
-export function PropertyEditModal({ property, onClose, onSave, agentId }: PropertyEditModalProps) {
+export function PropertyEditModal({ property, templateProperty, onClose, onSave, agentId }: PropertyEditModalProps) {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'basic' | 'details' | 'property_info' | 'location' | 'media'>('basic');
 
@@ -92,8 +93,19 @@ export function PropertyEditModal({ property, onClose, onSave, agentId }: Proper
         image_urls: property.image_urls || [],
         status: property.status || 'pending'
       });
+    } else if (templateProperty) {
+      const { id, created_at, updated_at, agent_id, views_count, is_featured, is_premium, ...templateData } = templateProperty as any;
+      setFormData({
+        ...templateData,
+        title: '',
+        price: 0,
+        status: 'pending',
+        amenities: templateData.amenities || [],
+        image_urls: [],
+        main_image_url: ''
+      });
     }
-  }, [property]);
+  }, [property, templateProperty]);
 
   const propertyTypes = [
     'condo', 'apartment', 'house', 'villa', 'studio',

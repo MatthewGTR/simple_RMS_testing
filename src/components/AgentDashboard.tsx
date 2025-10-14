@@ -7,7 +7,8 @@ import { showNotification } from './Notification';
 import {
   Home, Plus, Edit, Trash2, Eye, Search, RefreshCw, MapPin, Bed, Bath, Square,
   Building2, Star, Zap, CheckCircle, Clock, EyeOff, MoreVertical, Copy, Power,
-  TrendingUp, Filter, X, ChevronRight, Package
+  TrendingUp, Filter, X, ChevronRight, Package, CheckSquare, Square as SquareIcon,
+  FileText, Layers
 } from 'lucide-react';
 
 interface Property {
@@ -39,6 +40,7 @@ export function AgentDashboard() {
   const { user, profile } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
+  const [allProperties, setAllProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -48,6 +50,12 @@ export function AgentDashboard() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+
+  const [batchMode, setBatchMode] = useState(false);
+  const [selectedProperties, setSelectedProperties] = useState<Set<string>>(new Set());
+  const [showBatchMenu, setShowBatchMenu] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templateProperty, setTemplateProperty] = useState<Property | null>(null);
 
   const [stats, setStats] = useState({
     totalProperties: 0,
@@ -63,12 +71,29 @@ export function AgentDashboard() {
   useEffect(() => {
     if (user) {
       loadProperties();
+      loadAllProperties();
     }
   }, [user]);
 
   useEffect(() => {
     filterAndSortProperties();
   }, [properties, searchQuery, statusFilter, sortBy]);
+
+  const loadAllProperties = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      setAllProperties(data || []);
+    } catch (error: any) {
+      console.error('Error loading all properties:', error);
+    }
+  };
 
   const loadProperties = async () => {
     try {
@@ -154,6 +179,7 @@ export function AgentDashboard() {
   const handleRefresh = () => {
     setLoading(true);
     loadProperties();
+    loadAllProperties();
     showNotification('success', 'Data refreshed');
   };
 
@@ -163,11 +189,27 @@ export function AgentDashboard() {
       return;
     }
     setSelectedProperty(null);
+    setTemplateProperty(null);
+    setShowEditModal(true);
+  };
+
+  const handleAddFromTemplate = () => {
+    setShowTemplateModal(true);
+  };
+
+  const handleSelectTemplate = (template: Property) => {
+    if (stats.listingCredits <= 0) {
+      showNotification('warning', 'You need listing credits to create a property.');
+      return;
+    }
+    setTemplateProperty(template);
+    setShowTemplateModal(false);
     setShowEditModal(true);
   };
 
   const handleEditProperty = (property: Property) => {
     setSelectedProperty(property);
+    setTemplateProperty(null);
     setShowEditModal(true);
     setActiveMenu(null);
   };
@@ -275,6 +317,138 @@ export function AgentDashboard() {
     }
   };
 
+  const toggleBatchMode = () => {
+    setBatchMode(!batchMode);
+    setSelectedProperties(new Set());
+    setShowBatchMenu(false);
+  };
+
+  const togglePropertySelection = (propertyId: string) => {
+    const newSelection = new Set(selectedProperties);
+    if (newSelection.has(propertyId)) {
+      newSelection.delete(propertyId);
+    } else {
+      newSelection.add(propertyId);
+    }
+    setSelectedProperties(newSelection);
+  };
+
+  const selectAllProperties = () => {
+    if (selectedProperties.size === filteredProperties.length) {
+      setSelectedProperties(new Set());
+    } else {
+      setSelectedProperties(new Set(filteredProperties.map(p => p.id)));
+    }
+  };
+
+  const handleBatchActivate = async () => {
+    if (selectedProperties.size === 0) return;
+
+    setActionLoading('batch');
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update({ status: 'active' })
+        .in('id', Array.from(selectedProperties));
+
+      if (error) throw error;
+
+      showNotification('success', `${selectedProperties.size} properties activated`);
+      loadProperties();
+      setSelectedProperties(new Set());
+      setShowBatchMenu(false);
+    } catch (error: any) {
+      showNotification('error', error.message || 'Failed to activate properties');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleBatchDeactivate = async () => {
+    if (selectedProperties.size === 0) return;
+
+    setActionLoading('batch');
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update({ status: 'inactive' })
+        .in('id', Array.from(selectedProperties));
+
+      if (error) throw error;
+
+      showNotification('success', `${selectedProperties.size} properties deactivated`);
+      loadProperties();
+      setSelectedProperties(new Set());
+      setShowBatchMenu(false);
+    } catch (error: any) {
+      showNotification('error', error.message || 'Failed to deactivate properties');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleBatchFeature = async () => {
+    if (selectedProperties.size === 0) return;
+
+    if (stats.boostingCredits < selectedProperties.size) {
+      showNotification('warning', `You need ${selectedProperties.size} boosting credits to feature these properties.`);
+      return;
+    }
+
+    setActionLoading('batch');
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update({ is_featured: true })
+        .in('id', Array.from(selectedProperties));
+
+      if (error) throw error;
+
+      const { error: creditError } = await supabase
+        .from('profiles')
+        .update({ boosting_credits: stats.boostingCredits - selectedProperties.size })
+        .eq('id', user?.id);
+
+      if (creditError) throw creditError;
+
+      showNotification('success', `${selectedProperties.size} properties featured`);
+      loadProperties();
+      setSelectedProperties(new Set());
+      setShowBatchMenu(false);
+    } catch (error: any) {
+      showNotification('error', error.message || 'Failed to feature properties');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedProperties.size === 0) return;
+
+    if (!confirm(`Are you sure you want to delete ${selectedProperties.size} properties? This action cannot be undone.`)) {
+      return;
+    }
+
+    setActionLoading('batch');
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .delete()
+        .in('id', Array.from(selectedProperties));
+
+      if (error) throw error;
+
+      showNotification('success', `${selectedProperties.size} properties deleted`);
+      loadProperties();
+      setSelectedProperties(new Set());
+      setShowBatchMenu(false);
+    } catch (error: any) {
+      showNotification('error', error.message || 'Failed to delete properties');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   if (loading) {
     return <DashboardSkeleton />;
   }
@@ -288,24 +462,106 @@ export function AgentDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">My Listings</h1>
-                <p className="text-sm text-gray-500 mt-0.5">{stats.totalProperties} total properties</p>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {stats.totalProperties} total properties
+                  {batchMode && selectedProperties.size > 0 && (
+                    <span className="ml-2 text-blue-600 font-medium">
+                      ({selectedProperties.size} selected)
+                    </span>
+                  )}
+                </p>
               </div>
               <div className="flex items-center gap-3">
-                <button
-                  onClick={handleRefresh}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors inline-flex items-center gap-2"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span className="hidden sm:inline">Refresh</span>
-                </button>
-                <button
-                  onClick={handleAddProperty}
-                  disabled={stats.listingCredits <= 0}
-                  className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Plus className="w-5 h-5" />
-                  Add Listing
-                </button>
+                {batchMode && selectedProperties.size > 0 ? (
+                  <>
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowBatchMenu(!showBatchMenu)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium inline-flex items-center gap-2"
+                      >
+                        Batch Actions ({selectedProperties.size})
+                      </button>
+
+                      {showBatchMenu && (
+                        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-10">
+                          <button
+                            onClick={handleBatchActivate}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                          >
+                            <Power className="w-4 h-4 text-green-600" />
+                            Activate Selected
+                          </button>
+                          <button
+                            onClick={handleBatchDeactivate}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                          >
+                            <EyeOff className="w-4 h-4 text-gray-600" />
+                            Deactivate Selected
+                          </button>
+                          <button
+                            onClick={handleBatchFeature}
+                            disabled={stats.boostingCredits < selectedProperties.size}
+                            className="w-full text-left px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Zap className="w-4 h-4" />
+                            Feature Selected
+                          </button>
+                          <div className="border-t border-gray-200 my-1"></div>
+                          <button
+                            onClick={handleBatchDelete}
+                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete Selected
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={toggleBatchMode}
+                      className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors inline-flex items-center gap-2"
+                    >
+                      <X className="w-4 h-4" />
+                      <span className="hidden sm:inline">Cancel</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={toggleBatchMode}
+                      className={`px-4 py-2 rounded-lg transition-colors inline-flex items-center gap-2 ${
+                        batchMode
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <CheckSquare className="w-4 h-4" />
+                      <span className="hidden sm:inline">Batch Select</span>
+                    </button>
+                    <button
+                      onClick={handleRefresh}
+                      className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors inline-flex items-center gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      <span className="hidden sm:inline">Refresh</span>
+                    </button>
+                    <button
+                      onClick={handleAddFromTemplate}
+                      className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors inline-flex items-center gap-2"
+                    >
+                      <Layers className="w-4 h-4" />
+                      <span className="hidden sm:inline">From Template</span>
+                    </button>
+                    <button
+                      onClick={handleAddProperty}
+                      disabled={stats.listingCredits <= 0}
+                      className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Add Listing
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -444,15 +700,29 @@ export function AgentDashboard() {
           <div className="col-span-12 lg:col-span-9">
             {/* Search Bar */}
             <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by title, location, or property type..."
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+              <div className="flex items-center gap-3">
+                {batchMode && (
+                  <button
+                    onClick={selectAllProperties}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    {selectedProperties.size === filteredProperties.length ? (
+                      <CheckSquare className="w-5 h-5 text-blue-600" />
+                    ) : (
+                      <SquareIcon className="w-5 h-5 text-gray-400" />
+                    )}
+                  </button>
+                )}
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by title, location, or property type..."
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
               </div>
             </div>
 
@@ -486,7 +756,9 @@ export function AgentDashboard() {
                 {filteredProperties.map((property) => (
                   <div
                     key={property.id}
-                    className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow group"
+                    className={`bg-white rounded-xl border-2 overflow-hidden hover:shadow-lg transition-all group ${
+                      selectedProperties.has(property.id) ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
+                    }`}
                   >
                     {/* Image */}
                     <div className="relative h-52 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
@@ -502,8 +774,24 @@ export function AgentDashboard() {
                         </div>
                       )}
 
+                      {/* Batch Select Checkbox */}
+                      {batchMode && (
+                        <div className="absolute top-3 left-3">
+                          <button
+                            onClick={() => togglePropertySelection(property.id)}
+                            className="w-8 h-8 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
+                          >
+                            {selectedProperties.has(property.id) ? (
+                              <CheckSquare className="w-5 h-5 text-blue-600" />
+                            ) : (
+                              <SquareIcon className="w-5 h-5 text-gray-400" />
+                            )}
+                          </button>
+                        </div>
+                      )}
+
                       {/* Status Badge */}
-                      <div className="absolute top-3 left-3">
+                      <div className={`absolute ${batchMode ? 'top-3 right-3' : 'top-3 left-3'}`}>
                         {property.status === 'active' && (
                           <span className="px-2.5 py-1 bg-green-500 text-white text-xs font-semibold rounded-md">
                             Active
@@ -522,7 +810,7 @@ export function AgentDashboard() {
                       </div>
 
                       {/* Featured Badge */}
-                      {property.is_featured && (
+                      {property.is_featured && !batchMode && (
                         <div className="absolute top-3 right-3">
                           <span className="px-2.5 py-1 bg-orange-500 text-white text-xs font-semibold rounded-md flex items-center gap-1">
                             <Star className="w-3 h-3 fill-current" />
@@ -532,60 +820,61 @@ export function AgentDashboard() {
                       )}
 
                       {/* Menu Button */}
-                      <div className="absolute bottom-3 right-3">
-                        <button
-                          onClick={() => setActiveMenu(activeMenu === property.id ? null : property.id)}
-                          className="w-8 h-8 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
-                        >
-                          <MoreVertical className="w-4 h-4 text-gray-700" />
-                        </button>
+                      {!batchMode && (
+                        <div className="absolute bottom-3 right-3">
+                          <button
+                            onClick={() => setActiveMenu(activeMenu === property.id ? null : property.id)}
+                            className="w-8 h-8 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
+                          >
+                            <MoreVertical className="w-4 h-4 text-gray-700" />
+                          </button>
 
-                        {/* Dropdown Menu */}
-                        {activeMenu === property.id && (
-                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-10">
-                            <button
-                              onClick={() => handleEditProperty(property)}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                            >
-                              <Edit className="w-4 h-4" />
-                              Edit Details
-                            </button>
-                            <button
-                              onClick={() => handleDuplicateProperty(property)}
-                              disabled={stats.listingCredits <= 0}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <Copy className="w-4 h-4" />
-                              Duplicate
-                            </button>
-                            {property.status === 'active' && !property.is_featured && (
+                          {/* Dropdown Menu */}
+                          {activeMenu === property.id && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-10">
                               <button
-                                onClick={() => handleBoostProperty(property.id)}
-                                disabled={stats.boostingCredits <= 0}
-                                className="w-full text-left px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                onClick={() => handleEditProperty(property)}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                               >
-                                <Zap className="w-4 h-4" />
-                                Feature Listing
+                                <Edit className="w-4 h-4" />
+                                Edit Details
                               </button>
-                            )}
-                            <button
-                              onClick={() => handleToggleStatus(property)}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                            >
-                              <Power className="w-4 h-4" />
-                              {property.status === 'active' ? 'Deactivate' : 'Activate'}
-                            </button>
-                            <div className="border-t border-gray-200 my-1"></div>
-                            <button
-                              onClick={() => setShowDeleteConfirm(property.id)}
-                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                              <button
+                                onClick={() => handleDuplicateProperty(property)}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                              >
+                                <Copy className="w-4 h-4" />
+                                Duplicate
+                              </button>
+                              {property.status === 'active' && !property.is_featured && (
+                                <button
+                                  onClick={() => handleBoostProperty(property.id)}
+                                  disabled={stats.boostingCredits <= 0}
+                                  className="w-full text-left px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <Zap className="w-4 h-4" />
+                                  Feature Listing
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleToggleStatus(property)}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                              >
+                                <Power className="w-4 h-4" />
+                                {property.status === 'active' ? 'Deactivate' : 'Activate'}
+                              </button>
+                              <div className="border-t border-gray-200 my-1"></div>
+                              <button
+                                onClick={() => setShowDeleteConfirm(property.id)}
+                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Content */}
@@ -642,17 +931,98 @@ export function AgentDashboard() {
       {showEditModal && (
         <PropertyEditModal
           property={selectedProperty}
+          templateProperty={templateProperty}
           onClose={() => {
             setShowEditModal(false);
             setSelectedProperty(null);
+            setTemplateProperty(null);
           }}
           onSave={() => {
             loadProperties();
             setShowEditModal(false);
             setSelectedProperty(null);
+            setTemplateProperty(null);
           }}
           agentId={user?.id || ''}
         />
+      )}
+
+      {/* Template Selection Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Select Template Property</h3>
+                  <p className="text-sm text-gray-500 mt-1">Copy details from an existing property</p>
+                </div>
+                <button
+                  onClick={() => setShowTemplateModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {allProperties.map((property) => (
+                  <button
+                    key={property.id}
+                    onClick={() => handleSelectTemplate(property)}
+                    className="bg-white border-2 border-gray-200 hover:border-blue-500 rounded-lg p-4 text-left transition-all group"
+                  >
+                    <div className="flex gap-3">
+                      {property.main_image_url ? (
+                        <img
+                          src={property.main_image_url}
+                          alt={property.title}
+                          className="w-24 h-24 object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <Building2 className="w-8 h-8 text-gray-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-gray-900 mb-1 line-clamp-1">{property.title}</h4>
+                        <p className="text-sm text-gray-500 mb-2">
+                          {property.city}, {property.state}
+                        </p>
+                        <div className="flex items-center gap-3 text-xs text-gray-600">
+                          <span className="flex items-center gap-1">
+                            <Bed className="w-3 h-3" />
+                            {property.bedrooms}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Bath className="w-3 h-3" />
+                            {property.bathrooms}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Square className="w-3 h-3" />
+                            {property.sqft}
+                          </span>
+                        </div>
+                        <p className="text-sm font-bold text-gray-900 mt-2">
+                          RM {property.price.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {allProperties.length === 0 && (
+                <div className="text-center py-12">
+                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-500">No template properties available</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Delete Confirmation */}
