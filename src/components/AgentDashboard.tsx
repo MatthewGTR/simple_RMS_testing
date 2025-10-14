@@ -172,6 +172,12 @@ export function AgentDashboard() {
     setFilteredProperties(filtered);
   };
 
+  const handleRefresh = () => {
+    setLoading(true);
+    loadProperties();
+    showNotification('success', 'Data refreshed successfully');
+  };
+
   const handleAddProperty = () => {
     if (stats.listingCredits <= 0) {
       showNotification('warning', 'You need listing credits to create a property.');
