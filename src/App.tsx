@@ -26,6 +26,7 @@ function AppContent() {
   console.log('Loading:', loading)
   console.log('User:', user?.email || 'none')
   console.log('Profile:', profile)
+  console.log('Current adminView:', adminView)
 
   if (loading) {
     console.log('Still loading...')
