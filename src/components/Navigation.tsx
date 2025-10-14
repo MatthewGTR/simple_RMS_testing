@@ -28,49 +28,58 @@ export function Navigation({ activeView, onViewChange }: NavigationProps) {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-8">
-            <div className="flex items-center">
+            <button
+              onClick={() => onViewChange('public-home')}
+              className="flex items-center hover:opacity-80 transition-opacity"
+            >
               <div className="bg-blue-600 rounded-lg p-2">
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <span className="ml-3 text-xl font-bold text-gray-900">Property AI</span>
-            </div>
+            </button>
 
             <div className="flex space-x-2">
-              <button
-                onClick={() => onViewChange('dashboard')}
-                className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeView === 'dashboard'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <Home className="w-4 h-4 mr-2" />
-                Dashboard
-              </button>
+              {profile?.user_type === 'agent' && (
+                <button
+                  onClick={() => onViewChange('dashboard')}
+                  className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeView === 'dashboard'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <Home className="w-4 h-4 mr-2" />
+                  Dashboard
+                </button>
+              )}
 
-              <button
-                onClick={() => onViewChange('public-home')}
-                className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeView === 'public-home'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <Globe className="w-4 h-4 mr-2" />
-                Home
-              </button>
+              {profile?.user_type === 'consumer' && (
+                <>
+                  <button
+                    onClick={() => onViewChange('public-home')}
+                    className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeView === 'public-home'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Globe className="w-4 h-4 mr-2" />
+                    Home
+                  </button>
 
-              <button
-                onClick={() => onViewChange('browse-buy')}
-                className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeView === 'browse-buy'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <Search className="w-4 h-4 mr-2" />
-                Browse
-              </button>
+                  <button
+                    onClick={() => onViewChange('browse-buy')}
+                    className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeView === 'browse-buy'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Search className="w-4 h-4 mr-2" />
+                    Browse
+                  </button>
+                </>
+              )}
 
               {isAdmin && (
                 <>
