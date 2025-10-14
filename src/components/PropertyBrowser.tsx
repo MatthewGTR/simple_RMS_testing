@@ -186,30 +186,29 @@ export function PropertyBrowser({ section, onBack, onShowAuth }: PropertyBrowser
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl p-10">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Get Started Today</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Want to List Your Property?</h2>
             <p className="text-gray-600 mb-8">
               Register as an agent to start listing your properties. Our team will verify your account within 24 hours.
             </p>
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold">1</div>
-                <p className="text-gray-900 font-medium">Register as an Agent</p>
+                <p className="text-gray-900 font-medium">Click "Login / Register" at the top</p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold">2</div>
-                <p className="text-gray-900 font-medium">Get Verified by Our Team</p>
+                <p className="text-gray-900 font-medium">Choose "Property Agent" account type</p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold">3</div>
-                <p className="text-gray-900 font-medium">Start Listing Properties</p>
+                <p className="text-gray-900 font-medium">Complete registration and start listing</p>
               </div>
             </div>
-            <button
-              onClick={() => onShowAuth('role-selection')}
-              className="w-full mt-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:shadow-lg transition-all font-bold text-lg"
-            >
-              Register as Agent
-            </button>
+            <div className="mt-8 p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
+              <p className="text-blue-800 font-medium text-center">
+                Use the "Login / Register" button in the header to get started
+              </p>
+            </div>
           </div>
         </div>
       </div>

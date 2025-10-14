@@ -104,15 +104,9 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
               <div className="w-px h-8 bg-gray-300 mx-2"></div>
               <button
                 onClick={() => onShowAuth('signin')}
-                className="px-5 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all font-medium"
+                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg transition-all font-semibold"
               >
-                Sign In
-              </button>
-              <button
-                onClick={() => onShowAuth('role-selection')}
-                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg transition-all font-medium"
-              >
-                Get Started
+                Login / Register
               </button>
             </nav>
 
@@ -155,15 +149,9 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
               <div className="h-px bg-gray-200 my-2"></div>
               <button
                 onClick={() => { onShowAuth('signin'); setMobileMenuOpen(false); }}
-                className="block w-full text-left px-4 py-3 text-gray-700 hover:bg-blue-50 rounded-lg font-medium"
+                className="block w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold"
               >
-                Sign In
-              </button>
-              <button
-                onClick={() => { onShowAuth('role-selection'); setMobileMenuOpen(false); }}
-                className="block w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium"
-              >
-                Get Started
+                Login / Register
               </button>
             </div>
           </div>
@@ -427,12 +415,9 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
                   <span className="text-lg">Easy property management tools</span>
                 </li>
               </ul>
-              <button
-                onClick={() => onShowAuth('role-selection')}
-                className="px-8 py-4 bg-white text-blue-600 rounded-xl hover:bg-gray-100 transition-all font-bold text-lg shadow-xl"
-              >
-                Register as Agent
-              </button>
+              <p className="text-blue-100 text-lg">
+                Ready to get started? Click "Login / Register" in the header to create your agent account.
+              </p>
             </div>
             <div className="relative">
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
@@ -508,10 +493,10 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
             <div>
               <h4 className="text-white font-bold mb-4">For Agents</h4>
               <ul className="space-y-3 text-sm">
-                <li><button onClick={() => onShowAuth('role-selection')} className="hover:text-white transition-colors">Register</button></li>
-                <li><button onClick={() => onShowAuth('signin')} className="hover:text-white transition-colors">Sign In</button></li>
-                <li><button className="hover:text-white transition-colors">Pricing</button></li>
-                <li><button className="hover:text-white transition-colors">Resources</button></li>
+                <li><span className="text-gray-400">Agent Features</span></li>
+                <li><span className="text-gray-400">Pricing</span></li>
+                <li><span className="text-gray-400">Resources</span></li>
+                <li><span className="text-gray-400">Support</span></li>
               </ul>
             </div>
 
@@ -526,17 +511,8 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
             </div>
           </div>
 
-          <div className="border-t border-gray-800 pt-8">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-              <p className="text-sm text-center md:text-left">&copy; 2025 Property AI. All rights reserved. Made with ❤️ in Malaysia</p>
-              <button
-                onClick={() => onShowAuth('signin')}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-sm font-medium"
-              >
-                <Shield className="w-4 h-4" />
-                Admin Login
-              </button>
-            </div>
+          <div className="border-t border-gray-800 pt-8 text-center">
+            <p className="text-sm">&copy; 2025 Property AI. All rights reserved. Made with ❤️ in Malaysia</p>
           </div>
         </div>
       </footer>
