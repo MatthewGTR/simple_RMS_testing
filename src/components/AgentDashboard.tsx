@@ -79,6 +79,19 @@ export function AgentDashboard() {
     filterAndSortProperties();
   }, [properties, searchQuery, statusFilter, sortBy]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.dropdown-menu') && !target.closest('.menu-button')) {
+        setActiveMenu(null);
+        setShowBatchMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const loadAllProperties = async () => {
     try {
       const { data, error } = await supabase
@@ -477,13 +490,13 @@ export function AgentDashboard() {
                     <div className="relative">
                       <button
                         onClick={() => setShowBatchMenu(!showBatchMenu)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium inline-flex items-center gap-2"
+                        className="menu-button px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium inline-flex items-center gap-2"
                       >
                         Batch Actions ({selectedProperties.size})
                       </button>
 
                       {showBatchMenu && (
-                        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-10">
+                        <div className="dropdown-menu absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-10">
                           <button
                             onClick={handleBatchActivate}
                             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -824,14 +837,14 @@ export function AgentDashboard() {
                         <div className="absolute bottom-3 right-3">
                           <button
                             onClick={() => setActiveMenu(activeMenu === property.id ? null : property.id)}
-                            className="w-8 h-8 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
+                            className="menu-button w-8 h-8 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
                           >
                             <MoreVertical className="w-4 h-4 text-gray-700" />
                           </button>
 
                           {/* Dropdown Menu */}
                           {activeMenu === property.id && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-10">
+                            <div className="dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-10">
                               <button
                                 onClick={() => handleEditProperty(property)}
                                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"

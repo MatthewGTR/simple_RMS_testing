@@ -756,6 +756,7 @@ export function PropertyEditModal({ property, templateProperty, onClose, onSave,
                       value={formData.address}
                       onChange={(e) => handleChange('address', e.target.value)}
                       onFocus={() => setShowSuggestions(prev => ({ ...prev, address: true }))}
+                      onBlur={() => setTimeout(() => setShowSuggestions(prev => ({ ...prev, address: false })), 200)}
                       placeholder="Street address"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
@@ -789,6 +790,7 @@ export function PropertyEditModal({ property, templateProperty, onClose, onSave,
                         value={formData.city}
                         onChange={(e) => handleChange('city', e.target.value)}
                         onFocus={() => setShowSuggestions(prev => ({ ...prev, city: true }))}
+                        onBlur={() => setTimeout(() => setShowSuggestions(prev => ({ ...prev, city: false })), 200)}
                         placeholder="City"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
