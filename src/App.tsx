@@ -5,10 +5,11 @@ import { Navigation } from './components/Navigation'
 import { Dashboard } from './components/Dashboard'
 import { AdminDashboard } from './components/AdminDashboard'
 import { EnhancedAdminPanel } from './components/EnhancedAdminPanel'
+import { PropertyManagement } from './components/PropertyManagement'
 
 function AppContent() {
   const { user, profile, loading, error } = useAuth()
-  const [activeView, setActiveView] = useState<'dashboard' | 'admin-dashboard' | 'enhanced-admin'>('dashboard')
+  const [activeView, setActiveView] = useState<'dashboard' | 'admin-dashboard' | 'enhanced-admin' | 'properties'>('dashboard')
 
   console.log('=== APP CONTENT RENDER ===')
   console.log('Loading:', loading)
@@ -60,6 +61,8 @@ function AppContent() {
           <AdminDashboard onNavigate={setActiveView} />
         ) : activeView === 'enhanced-admin' && isAdmin ? (
           <EnhancedAdminPanel />
+        ) : activeView === 'properties' && isAdmin ? (
+          <PropertyManagement />
         ) : (
           <Dashboard />
         )}

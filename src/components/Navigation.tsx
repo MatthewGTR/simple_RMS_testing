@@ -1,10 +1,10 @@
 import React from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Home, Settings, LogOut, Shield } from 'lucide-react'
+import { Home, Settings, LogOut, Shield, Building2 } from 'lucide-react'
 
 interface NavigationProps {
-  activeView: 'dashboard' | 'admin-dashboard' | 'enhanced-admin'
-  onViewChange: (view: 'dashboard' | 'admin-dashboard' | 'enhanced-admin') => void
+  activeView: 'dashboard' | 'admin-dashboard' | 'enhanced-admin' | 'properties'
+  onViewChange: (view: 'dashboard' | 'admin-dashboard' | 'enhanced-admin' | 'properties') => void
 }
 
 export function Navigation({ activeView, onViewChange }: NavigationProps) {
@@ -72,6 +72,18 @@ export function Navigation({ activeView, onViewChange }: NavigationProps) {
                   >
                     <Settings className="w-4 h-4 mr-2" />
                     User Management
+                  </button>
+
+                  <button
+                    onClick={() => onViewChange('properties')}
+                    className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeView === 'properties'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Properties
                   </button>
                 </>
               )}
