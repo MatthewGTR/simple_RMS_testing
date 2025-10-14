@@ -25,7 +25,7 @@ interface PropertyFormData {
   deposit_info: string;
 }
 
-const PROPERTY_COST = 5;
+const LISTING_COST = 5;
 
 export function PropertySubmission() {
   const { user, profile } = useAuth();
@@ -82,8 +82,9 @@ export function PropertySubmission() {
       return;
     }
 
-    if (profile.credits < PROPERTY_COST) {
-      setError(`Insufficient credits. You need ${PROPERTY_COST} credits to post a property. You have ${profile.credits} credits.`);
+    const listingCredits = profile.listing_credits || 0;
+    if (listingCredits < LISTING_COST) {
+      setError(`Insufficient listing credits. You need ${LISTING_COST} listing credits to post a property. You have ${listingCredits} listing credits.`);
       return;
     }
 
@@ -119,7 +120,27 @@ export function PropertySubmission() {
 
       if (insertError) throw insertError;
 
-      setMessage(`Property posted successfully! ${PROPERTY_COST} credits have been deducted.`);
+      // Deduct listing credits
+      const { error: creditError } = await supabase
+        .from('profiles')
+        .update({ listing_credits: listingCredits - LISTING_COST })
+        .eq('id', user.id);
+
+      if (creditError) {
+        console.error('Failed to deduct credits:', creditError);
+      }
+
+      // Log transaction
+      await supabase.from('transaction_history').insert({
+        user_id: user.id,
+        transaction_type: 'deduction',
+        amount: LISTING_COST,
+        credit_type: 'listing',
+        description: `Property listing: ${formData.title}`,
+        admin_id: null
+      });
+
+      setMessage(`Property posted successfully! ${LISTING_COST} listing credits have been deducted.`);
 
       setFormData({
         title: '',
@@ -171,7 +192,7 @@ export function PropertySubmission() {
             <Home className="w-8 h-8 text-blue-600" />
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Submit Property</h2>
-              <p className="text-sm text-gray-600">Cost: {PROPERTY_COST} credits | Your balance: {profile?.credits || 0} credits</p>
+              <p className="text-sm text-gray-600">Cost: {LISTING_COST} listing credits | Your balance: {profile?.listing_credits || 0} listing credits, {profile?.boosting_credits || 0} boosting credits</p>
             </div>
           </div>
         </div>

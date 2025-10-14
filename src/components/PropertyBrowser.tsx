@@ -70,8 +70,7 @@ export function PropertyBrowser({ section, onBack, onShowAuth }: PropertyBrowser
             phone
           )
         `)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false });
+        .eq('status', 'active');
 
       if (section === 'buy') {
         query = query.eq('listing_type', 'sale');
@@ -82,7 +81,17 @@ export function PropertyBrowser({ section, onBack, onShowAuth }: PropertyBrowser
       const { data, error } = await query;
 
       if (error) throw error;
-      setProperties(data || []);
+
+      // Sort to show featured and premium properties first
+      const sortedData = (data || []).sort((a, b) => {
+        if (a.is_premium && !b.is_premium) return -1;
+        if (!a.is_premium && b.is_premium) return 1;
+        if (a.is_featured && !b.is_featured) return -1;
+        if (!a.is_featured && b.is_featured) return 1;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+
+      setProperties(sortedData);
     } catch (err) {
       console.error('Error loading properties:', err);
     } finally {

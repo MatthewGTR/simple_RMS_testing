@@ -129,6 +129,55 @@ export function AgentDashboard() {
     }
   };
 
+  const handleBoostProperty = async (propertyId: string) => {
+    if (!user || !profile) return;
+
+    const boostingCredits = profile.boosting_credits || 0;
+    const BOOST_COST = 3;
+
+    if (boostingCredits < BOOST_COST) {
+      alert(`Insufficient boosting credits. You need ${BOOST_COST} boosting credits. You have ${boostingCredits}.`);
+      return;
+    }
+
+    if (!confirm(`Boost this property for ${BOOST_COST} boosting credits? It will be featured for 7 days.`)) return;
+
+    try {
+      const { error: propertyError } = await supabase
+        .from('properties')
+        .update({
+          is_featured: true,
+          featured_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          boost_count: supabase.rpc('increment_boost_count', { property_id: propertyId })
+        })
+        .eq('id', propertyId);
+
+      if (propertyError) throw propertyError;
+
+      const { error: creditError } = await supabase
+        .from('profiles')
+        .update({ boosting_credits: boostingCredits - BOOST_COST })
+        .eq('id', user.id);
+
+      if (creditError) throw creditError;
+
+      await supabase.from('transaction_history').insert({
+        user_id: user.id,
+        transaction_type: 'deduction',
+        amount: BOOST_COST,
+        credit_type: 'boosting',
+        description: `Boosted property listing`,
+        admin_id: null
+      });
+
+      alert('Property boosted successfully! It will be featured for 7 days.');
+      loadAgentData();
+    } catch (err: any) {
+      console.error('Error boosting property:', err);
+      alert('Failed to boost property');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -262,12 +311,23 @@ export function AgentDashboard() {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Credits Balance</h2>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-3xl font-bold text-blue-600">{profile?.credits || 0} Credits</p>
-                <p className="text-sm text-gray-600 mt-1">Each property posting costs 5 credits</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-blue-800">Listing Credits</p>
+                  <Home className="w-5 h-5 text-blue-600" />
+                </div>
+                <p className="text-4xl font-bold text-blue-600">{profile?.listing_credits || 0}</p>
+                <p className="text-xs text-blue-700 mt-2">Used for posting new properties (5 per listing)</p>
               </div>
-              <DollarSign className="w-12 h-12 text-blue-600" />
+              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-green-800">Boosting Credits</p>
+                  <TrendingUp className="w-5 h-5 text-green-600" />
+                </div>
+                <p className="text-4xl font-bold text-green-600">{profile?.boosting_credits || 0}</p>
+                <p className="text-xs text-green-700 mt-2">Used for featuring properties (3 per boost)</p>
+              </div>
             </div>
           </div>
 
@@ -337,6 +397,14 @@ export function AgentDashboard() {
                       </div>
                     </div>
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => handleBoostProperty(property.id)}
+                        className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:shadow-lg transition-all font-medium flex items-center gap-2"
+                        title="Boost Property"
+                      >
+                        <TrendingUp className="w-4 h-4" />
+                        Boost
+                      </button>
                       <button
                         onClick={() => handleDeleteProperty(property.id)}
                         className="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"

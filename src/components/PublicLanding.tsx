@@ -39,9 +39,9 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
     try {
       const { data, error } = await supabase
         .from('properties')
-        .select('id, title, price, city, state, bedrooms, bathrooms, sqft, property_type, listing_type')
+        .select('id, title, price, city, state, bedrooms, bathrooms, sqft, property_type, listing_type, is_featured, is_premium')
         .eq('status', 'active')
-        .eq('featured', true)
+        .or('is_featured.eq.true,is_premium.eq.true')
         .limit(6);
 
       if (error) throw error;
@@ -526,8 +526,17 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
             </div>
           </div>
 
-          <div className="border-t border-gray-800 pt-8 text-center text-sm">
-            <p>&copy; 2025 Property AI. All rights reserved. Made with ❤️ in Malaysia</p>
+          <div className="border-t border-gray-800 pt-8">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+              <p className="text-sm text-center md:text-left">&copy; 2025 Property AI. All rights reserved. Made with ❤️ in Malaysia</p>
+              <button
+                onClick={() => onShowAuth('signin')}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-sm font-medium"
+              >
+                <Shield className="w-4 h-4" />
+                Admin Login
+              </button>
+            </div>
           </div>
         </div>
       </footer>
