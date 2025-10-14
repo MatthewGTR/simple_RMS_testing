@@ -1,10 +1,10 @@
 import React from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Home, Settings, LogOut, Shield, Building2 } from 'lucide-react'
+import { Home, Settings, LogOut, Shield, Building2, Globe, Search } from 'lucide-react'
 
 interface NavigationProps {
-  activeView: 'dashboard' | 'admin-dashboard' | 'enhanced-admin' | 'properties'
-  onViewChange: (view: 'dashboard' | 'admin-dashboard' | 'enhanced-admin' | 'properties') => void
+  activeView: 'dashboard' | 'admin-dashboard' | 'enhanced-admin' | 'properties' | 'public-home' | 'browse-buy' | 'browse-rent'
+  onViewChange: (view: 'dashboard' | 'admin-dashboard' | 'enhanced-admin' | 'properties' | 'public-home' | 'browse-buy' | 'browse-rent') => void
 }
 
 export function Navigation({ activeView, onViewChange }: NavigationProps) {
@@ -35,7 +35,7 @@ export function Navigation({ activeView, onViewChange }: NavigationProps) {
               <span className="ml-3 text-xl font-bold text-gray-900">Property AI</span>
             </div>
 
-            <div className="flex space-x-4">
+            <div className="flex space-x-2">
               <button
                 onClick={() => onViewChange('dashboard')}
                 className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -46,6 +46,30 @@ export function Navigation({ activeView, onViewChange }: NavigationProps) {
               >
                 <Home className="w-4 h-4 mr-2" />
                 Dashboard
+              </button>
+
+              <button
+                onClick={() => onViewChange('public-home')}
+                className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeView === 'public-home'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <Globe className="w-4 h-4 mr-2" />
+                Home
+              </button>
+
+              <button
+                onClick={() => onViewChange('browse-buy')}
+                className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeView === 'browse-buy'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <Search className="w-4 h-4 mr-2" />
+                Browse
               </button>
 
               {isAdmin && (

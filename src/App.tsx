@@ -8,11 +8,11 @@ import { Dashboard } from './components/Dashboard'
 import { AdminDashboard } from './components/AdminDashboard'
 import { EnhancedAdminPanel } from './components/EnhancedAdminPanel'
 import { PropertyManagement } from './components/PropertyManagement'
-import { AgentDashboard } from './components/AgentDashboard'
+import { AgentDashboardNew as AgentDashboard } from './components/AgentDashboardNew'
 import { ConsumerDashboard } from './components/ConsumerDashboard'
 
 type PublicSection = 'home' | 'buy' | 'rent' | 'sell' | 'new-development'
-type AdminView = 'dashboard' | 'admin-dashboard' | 'enhanced-admin' | 'properties'
+type AdminView = 'dashboard' | 'admin-dashboard' | 'enhanced-admin' | 'properties' | 'public-home' | 'browse-buy' | 'browse-rent'
 
 function AppContent() {
   const { user, profile, loading, error } = useAuth()
@@ -106,7 +106,7 @@ function AppContent() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navigation activeView={adminView} onViewChange={setAdminView} />
-        <main className="py-8 px-4 sm:px-6 lg:px-8">
+        <main className={adminView.startsWith('public') || adminView.startsWith('browse') ? '' : 'py-8 px-4 sm:px-6 lg:px-8'}>
           {adminView === 'dashboard' ? (
             <Dashboard />
           ) : adminView === 'admin-dashboard' ? (
@@ -115,6 +115,15 @@ function AppContent() {
             <EnhancedAdminPanel />
           ) : adminView === 'properties' ? (
             <PropertyManagement />
+          ) : adminView === 'public-home' ? (
+            <PublicLanding onShowAuth={() => {}} onNavigate={(section) => {
+              if (section === 'buy') setAdminView('browse-buy');
+              else if (section === 'rent') setAdminView('browse-rent');
+            }} />
+          ) : adminView === 'browse-buy' ? (
+            <PropertyBrowser section="buy" onBack={() => setAdminView('public-home')} onShowAuth={() => {}} />
+          ) : adminView === 'browse-rent' ? (
+            <PropertyBrowser section="rent" onBack={() => setAdminView('public-home')} onShowAuth={() => {}} />
           ) : (
             <Dashboard />
           )}
@@ -126,9 +135,22 @@ function AppContent() {
   if (isAgent) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Navigation activeView="dashboard" onViewChange={() => {}} />
-        <main className="py-8 px-4 sm:px-6 lg:px-8">
-          <AgentDashboard />
+        <Navigation activeView={adminView} onViewChange={setAdminView} />
+        <main className={adminView.startsWith('public') || adminView.startsWith('browse') ? '' : 'py-8 px-4 sm:px-6 lg:px-8'}>
+          {adminView === 'dashboard' ? (
+            <AgentDashboard />
+          ) : adminView === 'public-home' ? (
+            <PublicLanding onShowAuth={() => {}} onNavigate={(section) => {
+              if (section === 'buy') setAdminView('browse-buy');
+              else if (section === 'rent') setAdminView('browse-rent');
+            }} />
+          ) : adminView === 'browse-buy' ? (
+            <PropertyBrowser section="buy" onBack={() => setAdminView('public-home')} onShowAuth={() => {}} />
+          ) : adminView === 'browse-rent' ? (
+            <PropertyBrowser section="rent" onBack={() => setAdminView('public-home')} onShowAuth={() => {}} />
+          ) : (
+            <AgentDashboard />
+          )}
         </main>
       </div>
     )
@@ -137,9 +159,22 @@ function AppContent() {
   if (isConsumer) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Navigation activeView="dashboard" onViewChange={() => {}} />
-        <main className="py-8 px-4 sm:px-6 lg:px-8">
-          <ConsumerDashboard />
+        <Navigation activeView={adminView} onViewChange={setAdminView} />
+        <main className={adminView.startsWith('public') || adminView.startsWith('browse') ? '' : 'py-8 px-4 sm:px-6 lg:px-8'}>
+          {adminView === 'dashboard' ? (
+            <ConsumerDashboard />
+          ) : adminView === 'public-home' ? (
+            <PublicLanding onShowAuth={() => {}} onNavigate={(section) => {
+              if (section === 'buy') setAdminView('browse-buy');
+              else if (section === 'rent') setAdminView('browse-rent');
+            }} />
+          ) : adminView === 'browse-buy' ? (
+            <PropertyBrowser section="buy" onBack={() => setAdminView('public-home')} onShowAuth={() => {}} />
+          ) : adminView === 'browse-rent' ? (
+            <PropertyBrowser section="rent" onBack={() => setAdminView('public-home')} onShowAuth={() => {}} />
+          ) : (
+            <ConsumerDashboard />
+          )}
         </main>
       </div>
     )
