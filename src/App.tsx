@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { PublicLanding } from './components/PublicLanding'
 import { PropertyBrowser } from './components/PropertyBrowser'
-import { EnhancedAuth } from './components/EnhancedAuth'
+import { UnifiedAuth } from './components/UnifiedAuth'
 import { Navigation } from './components/Navigation'
 import { Dashboard } from './components/Dashboard'
 import { AdminDashboard } from './components/AdminDashboard'
@@ -17,7 +17,7 @@ type AdminView = 'dashboard' | 'admin-dashboard' | 'enhanced-admin' | 'propertie
 function AppContent() {
   const { user, profile, loading, error } = useAuth()
   const [showAuth, setShowAuth] = useState(false)
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin')
+  const [authMode, setAuthMode] = useState<'signin' | 'role-selection'>('signin')
   const [publicSection, setPublicSection] = useState<PublicSection>('home')
   const [adminView, setAdminView] = useState<AdminView>('dashboard')
 
@@ -50,7 +50,7 @@ function AppContent() {
     )
   }
 
-  const handleShowAuth = (mode: 'signin' | 'signup' = 'signin') => {
+  const handleShowAuth = (mode: 'signin' | 'role-selection' = 'signin') => {
     setAuthMode(mode)
     setShowAuth(true)
   }
@@ -71,7 +71,7 @@ function AppContent() {
             onShowAuth={handleShowAuth}
           />
           {showAuth && (
-            <EnhancedAuth
+            <UnifiedAuth
               onClose={() => setShowAuth(false)}
               initialMode={authMode}
             />
@@ -87,7 +87,7 @@ function AppContent() {
           onNavigate={handleNavigate}
         />
         {showAuth && (
-          <EnhancedAuth
+          <UnifiedAuth
             onClose={() => setShowAuth(false)}
             initialMode={authMode}
           />

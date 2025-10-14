@@ -35,7 +35,7 @@ interface Property {
 interface PropertyBrowserProps {
   section: 'buy' | 'rent' | 'sell' | 'new-development';
   onBack: () => void;
-  onShowAuth: (mode?: 'signin' | 'signup') => void;
+  onShowAuth: (mode?: 'signin' | 'role-selection') => void;
 }
 
 export function PropertyBrowser({ section, onBack, onShowAuth }: PropertyBrowserProps) {
@@ -205,7 +205,7 @@ export function PropertyBrowser({ section, onBack, onShowAuth }: PropertyBrowser
               </div>
             </div>
             <button
-              onClick={() => onShowAuth('signup')}
+              onClick={() => onShowAuth('role-selection')}
               className="w-full mt-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:shadow-lg transition-all font-bold text-lg"
             >
               Register as Agent

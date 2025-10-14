@@ -20,7 +20,7 @@ interface Property {
 }
 
 interface PublicLandingProps {
-  onShowAuth: (mode?: 'signin' | 'signup') => void;
+  onShowAuth: (mode?: 'signin' | 'role-selection') => void;
   onNavigate: (section: 'buy' | 'rent' | 'sell' | 'new-development') => void;
 }
 
@@ -109,7 +109,7 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
                 Sign In
               </button>
               <button
-                onClick={() => onShowAuth('signup')}
+                onClick={() => onShowAuth('role-selection')}
                 className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg transition-all font-medium"
               >
                 Get Started
@@ -160,7 +160,7 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
                 Sign In
               </button>
               <button
-                onClick={() => { onShowAuth('signup'); setMobileMenuOpen(false); }}
+                onClick={() => { onShowAuth('role-selection'); setMobileMenuOpen(false); }}
                 className="block w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium"
               >
                 Get Started
@@ -428,7 +428,7 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
                 </li>
               </ul>
               <button
-                onClick={() => onShowAuth('signup')}
+                onClick={() => onShowAuth('role-selection')}
                 className="px-8 py-4 bg-white text-blue-600 rounded-xl hover:bg-gray-100 transition-all font-bold text-lg shadow-xl"
               >
                 Register as Agent
@@ -508,8 +508,8 @@ export function PublicLanding({ onShowAuth, onNavigate }: PublicLandingProps) {
             <div>
               <h4 className="text-white font-bold mb-4">For Agents</h4>
               <ul className="space-y-3 text-sm">
-                <li><button onClick={() => onShowAuth('signup')} className="hover:text-white transition-colors">Register</button></li>
-                <li><button onClick={() => onShowAuth('signin')} className="hover:text-white transition-colors">Agent Login</button></li>
+                <li><button onClick={() => onShowAuth('role-selection')} className="hover:text-white transition-colors">Register</button></li>
+                <li><button onClick={() => onShowAuth('signin')} className="hover:text-white transition-colors">Sign In</button></li>
                 <li><button className="hover:text-white transition-colors">Pricing</button></li>
                 <li><button className="hover:text-white transition-colors">Resources</button></li>
               </ul>
