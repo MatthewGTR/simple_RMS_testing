@@ -3,10 +3,12 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { DashboardSkeleton } from './LoadingSkeleton';
 import { PropertyEditModal } from './PropertyEditModal';
+import { showNotification } from './Notification';
 import {
   Home, Plus, Edit, Trash2, Eye, TrendingUp, DollarSign, Copy,
   MessageSquare, BarChart3, AlertCircle, CheckCircle, Search, Filter,
-  ChevronDown, Building2, Star, Zap, MoreVertical, RefreshCw, X
+  ChevronDown, Building2, Star, Zap, MoreVertical, RefreshCw, X,
+  EyeOff, Power, Clock, MapPin, Bed, Bath, Square
 } from 'lucide-react';
 
 interface Property {
@@ -45,6 +47,7 @@ export function AgentDashboardNew() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const [stats, setStats] = useState({
     totalProperties: 0,
@@ -81,6 +84,7 @@ export function AgentDashboardNew() {
       calculateStats(data || []);
     } catch (error) {
       console.error('Error loading properties:', error);
+      showNotification('error', 'Failed to load properties. Please refresh the page.');
     } finally {
       setLoading(false);
     }
@@ -123,22 +127,20 @@ export function AgentDashboardNew() {
   const filterAndSortProperties = () => {
     let filtered = [...properties];
 
-    // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(p =>
         p.title.toLowerCase().includes(query) ||
         p.city.toLowerCase().includes(query) ||
-        p.property_type.toLowerCase().includes(query)
+        p.property_type.toLowerCase().includes(query) ||
+        p.address.toLowerCase().includes(query)
       );
     }
 
-    // Status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(p => p.status === statusFilter);
     }
 
-    // Sort
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'newest':
@@ -160,6 +162,10 @@ export function AgentDashboardNew() {
   };
 
   const handleAddProperty = () => {
+    if (stats.listingCredits <= 0) {
+      showNotification('warning', 'You need listing credits to create a property. Please contact admin.');
+      return;
+    }
     setSelectedProperty(null);
     setShowEditModal(true);
   };
@@ -171,10 +177,11 @@ export function AgentDashboardNew() {
 
   const handleDuplicateProperty = async (property: Property) => {
     if (stats.listingCredits <= 0) {
-      alert('You need listing credits to create a new property. Please contact admin.');
+      showNotification('warning', 'You need listing credits to duplicate a property. Please contact admin.');
       return;
     }
 
+    setActionLoading(property.id);
     try {
       const { title, description, property_type, listing_type, price, bedrooms, bathrooms, sqft, address, city, state, postal_code, main_image_url, image_urls, amenities } = property;
 
@@ -201,28 +208,32 @@ export function AgentDashboardNew() {
         is_premium: false
       };
 
-      const { error } = await supabase
+      const { error: insertError } = await supabase
         .from('properties')
         .insert([newProperty]);
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
-      // Deduct listing credit
-      await supabase
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ listing_credits: stats.listingCredits - 1 })
         .eq('id', user?.id);
 
-      alert('Property duplicated successfully!');
-      loadProperties();
-      loadCredits();
-    } catch (error) {
+      if (updateError) throw updateError;
+
+      showNotification('success', 'Property duplicated successfully!');
+      await loadProperties();
+      await loadCredits();
+    } catch (error: any) {
       console.error('Error duplicating property:', error);
-      alert('Failed to duplicate property');
+      showNotification('error', error.message || 'Failed to duplicate property');
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const handleDeleteProperty = async (id: string) => {
+    setActionLoading(id);
     try {
       const { error } = await supabase
         .from('properties')
@@ -231,46 +242,53 @@ export function AgentDashboardNew() {
 
       if (error) throw error;
 
-      alert('Property deleted successfully!');
+      showNotification('success', 'Property deleted successfully!');
       setShowDeleteConfirm(null);
-      loadProperties();
-    } catch (error) {
+      await loadProperties();
+    } catch (error: any) {
       console.error('Error deleting property:', error);
-      alert('Failed to delete property');
+      showNotification('error', error.message || 'Failed to delete property');
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const handleBoostProperty = async (propertyId: string) => {
     if (stats.boostingCredits <= 0) {
-      alert('You need boosting credits to boost a property. Please contact admin.');
+      showNotification('warning', 'You need boosting credits to feature a property. Please contact admin.');
       return;
     }
 
+    setActionLoading(propertyId);
     try {
-      const { error } = await supabase
+      const { error: updateError } = await supabase
         .from('properties')
         .update({ is_featured: true })
         .eq('id', propertyId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      // Deduct boosting credit
-      await supabase
+      const { error: creditError } = await supabase
         .from('profiles')
         .update({ boosting_credits: stats.boostingCredits - 1 })
         .eq('id', user?.id);
 
-      alert('Property boosted successfully!');
-      loadProperties();
-      loadCredits();
-    } catch (error) {
+      if (creditError) throw creditError;
+
+      showNotification('success', 'Property boosted successfully! It will now appear as featured.');
+      await loadProperties();
+      await loadCredits();
+    } catch (error: any) {
       console.error('Error boosting property:', error);
-      alert('Failed to boost property');
+      showNotification('error', error.message || 'Failed to boost property');
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const handleToggleStatus = async (property: Property) => {
     const newStatus = property.status === 'active' ? 'inactive' : 'active';
+    setActionLoading(property.id);
 
     try {
       const { error } = await supabase
@@ -280,10 +298,13 @@ export function AgentDashboardNew() {
 
       if (error) throw error;
 
-      loadProperties();
-    } catch (error) {
+      showNotification('success', `Property ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully!`);
+      await loadProperties();
+    } catch (error: any) {
       console.error('Error updating status:', error);
-      alert('Failed to update property status');
+      showNotification('error', error.message || 'Failed to update property status');
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -302,6 +323,21 @@ export function AgentDashboardNew() {
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <CheckCircle className="w-4 h-4" />;
+      case 'pending':
+        return <Clock className="w-4 h-4" />;
+      case 'inactive':
+        return <EyeOff className="w-4 h-4" />;
+      case 'sold':
+        return <DollarSign className="w-4 h-4" />;
+      default:
+        return null;
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto">
@@ -315,89 +351,105 @@ export function AgentDashboardNew() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Property Management</h1>
-          <p className="text-gray-600 mt-1">Manage your property listings and track performance</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Property Management</h1>
+          <p className="text-lg text-gray-600">Manage your property listings and track performance</p>
         </div>
         <button
           onClick={handleAddProperty}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:shadow-lg transition-all font-semibold"
+          disabled={stats.listingCredits <= 0}
+          className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:shadow-xl transition-all font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-6 h-6" />
           Add Property
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <Building2 className="w-8 h-8 text-blue-600" />
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+        <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-100 p-6 hover:shadow-lg transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-blue-100 rounded-xl group-hover:scale-110 transition-transform">
+              <Building2 className="w-7 h-7 text-blue-600" />
+            </div>
           </div>
-          <p className="text-sm text-gray-600 mb-1">Total Properties</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.totalProperties}</p>
+          <p className="text-sm font-semibold text-gray-600 mb-1">Total Properties</p>
+          <p className="text-3xl font-bold text-gray-900">{stats.totalProperties}</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <CheckCircle className="w-8 h-8 text-green-600" />
+        <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-100 p-6 hover:shadow-lg transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-green-100 rounded-xl group-hover:scale-110 transition-transform">
+              <CheckCircle className="w-7 h-7 text-green-600" />
+            </div>
           </div>
-          <p className="text-sm text-gray-600 mb-1">Active Listings</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.activeListings}</p>
+          <p className="text-sm font-semibold text-gray-600 mb-1">Active Listings</p>
+          <p className="text-3xl font-bold text-gray-900">{stats.activeListings}</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <AlertCircle className="w-8 h-8 text-yellow-600" />
+        <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-100 p-6 hover:shadow-lg transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-yellow-100 rounded-xl group-hover:scale-110 transition-transform">
+              <Clock className="w-7 h-7 text-yellow-600" />
+            </div>
           </div>
-          <p className="text-sm text-gray-600 mb-1">Pending</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.pendingListings}</p>
+          <p className="text-sm font-semibold text-gray-600 mb-1">Pending</p>
+          <p className="text-3xl font-bold text-gray-900">{stats.pendingListings}</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <Eye className="w-8 h-8 text-purple-600" />
+        <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-100 p-6 hover:shadow-lg transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-purple-100 rounded-xl group-hover:scale-110 transition-transform">
+              <Eye className="w-7 h-7 text-purple-600" />
+            </div>
           </div>
-          <p className="text-sm text-gray-600 mb-1">Total Views</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.totalViews}</p>
+          <p className="text-sm font-semibold text-gray-600 mb-1">Total Views</p>
+          <p className="text-3xl font-bold text-gray-900">{stats.totalViews.toLocaleString()}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between mb-2">
-            <Home className="w-8 h-8" />
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-xl p-6 text-white hover:shadow-2xl transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-white/20 rounded-xl group-hover:scale-110 transition-transform">
+              <Home className="w-7 h-7 text-white" />
+            </div>
           </div>
-          <p className="text-sm text-blue-100 mb-1">Listing Credits</p>
-          <p className="text-2xl font-bold">{stats.listingCredits}</p>
+          <p className="text-sm font-semibold text-blue-100 mb-1">Listing Credits</p>
+          <p className="text-3xl font-bold">{stats.listingCredits}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between mb-2">
-            <Zap className="w-8 h-8" />
+        <div className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl shadow-xl p-6 text-white hover:shadow-2xl transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-white/20 rounded-xl group-hover:scale-110 transition-transform">
+              <Zap className="w-7 h-7 text-white" />
+            </div>
           </div>
-          <p className="text-sm text-yellow-100 mb-1">Boost Credits</p>
-          <p className="text-2xl font-bold">{stats.boostingCredits}</p>
+          <p className="text-sm font-semibold text-yellow-100 mb-1">Boost Credits</p>
+          <p className="text-3xl font-bold">{stats.boostingCredits}</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-200">
+      {/* Filters and Search */}
+      <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-100">
+        <div className="p-6 border-b-2 border-gray-100">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search properties..."
+                placeholder="Search properties by title, location, or type..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
               />
             </div>
 
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-6 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium min-w-[180px]"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -409,7 +461,7 @@ export function AgentDashboardNew() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-6 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium min-w-[200px]"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -419,139 +471,184 @@ export function AgentDashboardNew() {
             </select>
 
             <button
-              onClick={loadProperties}
-              className="px-4 py-3 border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+              onClick={() => { loadProperties(); loadCredits(); }}
+              className="px-6 py-4 border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+              title="Refresh"
             >
               <RefreshCw className="w-5 h-5 text-gray-600" />
             </button>
           </div>
         </div>
 
+        {/* Properties List */}
         <div className="p-6">
           {filteredProperties.length === 0 ? (
-            <div className="text-center py-12">
-              <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No properties found</h3>
-              <p className="text-gray-600 mb-6">
+            <div className="text-center py-20">
+              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Building2 className="w-12 h-12 text-gray-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                {properties.length === 0 ? 'No properties yet' : 'No properties found'}
+              </h3>
+              <p className="text-gray-600 mb-8 text-lg">
                 {properties.length === 0
-                  ? "You haven't added any properties yet"
+                  ? "Start by adding your first property listing"
                   : 'Try adjusting your search or filters'}
               </p>
               {properties.length === 0 && (
                 <button
                   onClick={handleAddProperty}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold"
+                  disabled={stats.listingCredits <= 0}
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:shadow-xl transition-all font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-6 h-6" />
                   Add Your First Property
                 </button>
               )}
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredProperties.map((property) => (
+            <div className="space-y-6">
+              {filteredProperties.map((property, index) => (
                 <div
                   key={property.id}
-                  className="group border-2 border-gray-200 rounded-xl p-6 hover:border-blue-300 hover:shadow-lg transition-all"
+                  className="group border-2 border-gray-200 rounded-2xl p-6 hover:border-blue-300 hover:shadow-xl transition-all duration-300 animate-slide-up"
+                  style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <div className="flex gap-6">
-                    <div className="w-48 h-36 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                    {/* Property Image */}
+                    <div className="w-64 h-48 flex-shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
                       {property.main_image_url ? (
                         <img
                           src={property.main_image_url}
                           alt={property.title}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Building2 className="w-12 h-12 text-gray-400" />
+                          <Building2 className="w-16 h-16 text-gray-400" />
                         </div>
                       )}
                     </div>
 
+                    {/* Property Details */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-xl font-bold text-gray-900 truncate">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1 min-w-0 pr-4">
+                          <div className="flex items-center gap-3 mb-3 flex-wrap">
+                            <h3 className="text-2xl font-bold text-gray-900 truncate">
                               {property.title}
                             </h3>
                             {property.is_featured && (
-                              <span className="flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold">
-                                <Star className="w-3 h-3 fill-current" />
+                              <span className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-full text-sm font-bold shadow-lg">
+                                <Star className="w-4 h-4 fill-current" />
                                 Featured
                               </span>
                             )}
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(property.status)}`}>
+                            <span className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold border-2 ${getStatusColor(property.status)}`}>
+                              {getStatusIcon(property.status)}
                               {property.status.toUpperCase()}
                             </span>
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-gray-600">
-                            <span className="capitalize">{property.property_type}</span>
-                            <span>•</span>
-                            <span>{property.city}, {property.state}</span>
-                            <span>•</span>
-                            <span className="flex items-center gap-1">
+                          <div className="flex items-center gap-4 text-sm text-gray-600 mb-3 flex-wrap">
+                            <span className="flex items-center gap-1.5 capitalize font-medium">
+                              <Building2 className="w-4 h-4" />
+                              {property.property_type}
+                            </span>
+                            <span className="flex items-center gap-1.5 font-medium">
+                              <MapPin className="w-4 h-4" />
+                              {property.city}, {property.state}
+                            </span>
+                            <span className="flex items-center gap-1.5 font-medium">
                               <Eye className="w-4 h-4" />
                               {property.views_count || 0} views
+                            </span>
+                          </div>
+                          <p className="text-gray-700 text-base mb-4 line-clamp-2">
+                            {property.description}
+                          </p>
+                          <div className="flex items-center gap-6 text-sm text-gray-600">
+                            <span className="flex items-center gap-2">
+                              <Bed className="w-5 h-5" />
+                              <span className="font-semibold">{property.bedrooms}</span>
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <Bath className="w-5 h-5" />
+                              <span className="font-semibold">{property.bathrooms}</span>
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <Square className="w-5 h-5" />
+                              <span className="font-semibold">{property.sqft} sqft</span>
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                        {property.description}
-                      </p>
-
-                      <div className="flex items-center justify-between">
+                      {/* Action Buttons */}
+                      <div className="flex items-center justify-between pt-4 border-t-2 border-gray-100">
                         <div>
-                          <p className="text-sm text-gray-600">Price</p>
-                          <p className="text-2xl font-bold text-blue-600">
+                          <p className="text-sm text-gray-600 mb-1">Price</p>
+                          <p className="text-3xl font-bold text-blue-600">
                             RM {property.price.toLocaleString()}
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           <button
                             onClick={() => handleEditProperty(property)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Edit"
+                            disabled={actionLoading === property.id}
+                            className="flex items-center gap-2 px-4 py-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-semibold disabled:opacity-50"
+                            title="Edit Property"
                           >
                             <Edit className="w-5 h-5" />
+                            <span className="hidden sm:inline">Edit</span>
                           </button>
+
                           <button
                             onClick={() => handleDuplicateProperty(property)}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                            title="Duplicate"
+                            disabled={actionLoading === property.id || stats.listingCredits <= 0}
+                            className="flex items-center gap-2 px-4 py-2.5 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition-colors font-semibold disabled:opacity-50"
+                            title="Duplicate Property"
                           >
                             <Copy className="w-5 h-5" />
+                            <span className="hidden sm:inline">Duplicate</span>
                           </button>
+
                           {property.status === 'active' && !property.is_featured && (
                             <button
                               onClick={() => handleBoostProperty(property.id)}
-                              className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
-                              title="Boost (Feature this property)"
+                              disabled={actionLoading === property.id || stats.boostingCredits <= 0}
+                              className="flex items-center gap-2 px-4 py-2.5 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors font-semibold disabled:opacity-50"
+                              title="Boost Property (Feature it)"
                             >
                               <Zap className="w-5 h-5" />
+                              <span className="hidden sm:inline">Boost</span>
                             </button>
                           )}
+
                           <button
                             onClick={() => handleToggleStatus(property)}
-                            className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                            disabled={actionLoading === property.id}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold transition-colors disabled:opacity-50 ${
                               property.status === 'active'
-                                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                ? 'text-gray-700 bg-gray-100 hover:bg-gray-200'
+                                : 'text-green-700 bg-green-100 hover:bg-green-200'
                             }`}
                             title={property.status === 'active' ? 'Deactivate' : 'Activate'}
                           >
-                            {property.status === 'active' ? 'Deactivate' : 'Activate'}
+                            <Power className="w-5 h-5" />
+                            <span className="hidden sm:inline">
+                              {property.status === 'active' ? 'Deactivate' : 'Activate'}
+                            </span>
                           </button>
+
                           <button
                             onClick={() => setShowDeleteConfirm(property.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete"
+                            disabled={actionLoading === property.id}
+                            className="flex items-center gap-2 px-4 py-2.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors font-semibold disabled:opacity-50"
+                            title="Delete Property"
                           >
                             <Trash2 className="w-5 h-5" />
+                            <span className="hidden sm:inline">Delete</span>
                           </button>
                         </div>
                       </div>
@@ -564,6 +661,7 @@ export function AgentDashboardNew() {
         </div>
       </div>
 
+      {/* Edit Modal */}
       {showEditModal && (
         <PropertyEditModal
           property={selectedProperty}
@@ -571,34 +669,38 @@ export function AgentDashboardNew() {
           onSave={() => {
             loadProperties();
             loadCredits();
+            setShowEditModal(false);
           }}
           agentId={user?.id || ''}
         />
       )}
 
+      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full animate-scale-in">
             <div className="text-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Trash2 className="w-8 h-8 text-red-600" />
+              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Trash2 className="w-10 h-10 text-red-600" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Delete Property?</h3>
-              <p className="text-gray-600 mb-6">
-                This action cannot be undone. This will permanently delete the property listing.
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">Delete Property?</h3>
+              <p className="text-gray-600 mb-8 text-lg">
+                This action cannot be undone. The property listing will be permanently deleted.
               </p>
-              <div className="flex gap-3">
+              <div className="flex gap-4">
                 <button
                   onClick={() => setShowDeleteConfirm(null)}
-                  className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                  disabled={actionLoading !== null}
+                  className="flex-1 px-6 py-4 border-2 border-gray-300 rounded-xl font-bold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleDeleteProperty(showDeleteConfirm)}
-                  className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-semibold"
+                  disabled={actionLoading !== null}
+                  className="flex-1 px-6 py-4 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-bold disabled:opacity-50"
                 >
-                  Delete
+                  {actionLoading === showDeleteConfirm ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </div>

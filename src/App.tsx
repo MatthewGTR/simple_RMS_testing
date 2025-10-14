@@ -10,6 +10,7 @@ import { EnhancedAdminPanel } from './components/EnhancedAdminPanel'
 import { PropertyManagement } from './components/PropertyManagement'
 import { AgentDashboardNew as AgentDashboard } from './components/AgentDashboardNew'
 import { ConsumerDashboard } from './components/ConsumerDashboard'
+import { NotificationContainer } from './components/Notification'
 
 type PublicSection = 'home' | 'buy' | 'rent' | 'sell' | 'new-development'
 type AdminView = 'dashboard' | 'admin-dashboard' | 'enhanced-admin' | 'properties' | 'public-home' | 'browse-buy' | 'browse-rent'
@@ -195,6 +196,7 @@ function App() {
   return (
     <AuthProvider>
       <AppContent />
+      <NotificationContainer />
     </AuthProvider>
   )
 }
