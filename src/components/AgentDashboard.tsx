@@ -468,19 +468,24 @@ export function AgentDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-gray-50">
       <div className="max-w-[1800px] mx-auto">
         {/* Top Bar */}
-        <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
-          <div className="px-6 py-4">
+        <div className="bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+          <div className="px-6 py-5">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">My Listings</h1>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  {stats.totalProperties} total properties
+                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg">
+                    <Building2 className="w-6 h-6 text-white" />
+                  </div>
+                  My Listings
+                </h1>
+                <p className="text-sm text-gray-600 mt-2 ml-13">
+                  {stats.totalProperties} {stats.totalProperties === 1 ? 'property' : 'properties'}
                   {batchMode && selectedProperties.size > 0 && (
-                    <span className="ml-2 text-blue-600 font-medium">
-                      ({selectedProperties.size} selected)
+                    <span className="ml-2 text-blue-600 font-semibold">
+                      • {selectedProperties.size} selected
                     </span>
                   )}
                 </p>
@@ -491,8 +496,9 @@ export function AgentDashboard() {
                     <div className="relative">
                       <button
                         onClick={() => setShowBatchMenu(!showBatchMenu)}
-                        className="menu-button px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium inline-flex items-center gap-2"
+                        className="menu-button px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl font-semibold inline-flex items-center gap-2"
                       >
+                        <Package className="w-4 h-4" />
                         Batch Actions ({selectedProperties.size})
                       </button>
 
@@ -533,7 +539,7 @@ export function AgentDashboard() {
                     </div>
                     <button
                       onClick={toggleBatchMode}
-                      className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors inline-flex items-center gap-2"
+                      className="px-5 py-2.5 text-gray-700 hover:bg-gray-100 rounded-xl transition-all font-medium inline-flex items-center gap-2 border border-gray-300"
                     >
                       <X className="w-4 h-4" />
                       <span className="hidden sm:inline">Cancel</span>
@@ -543,36 +549,36 @@ export function AgentDashboard() {
                   <>
                     <button
                       onClick={toggleBatchMode}
-                      className={`px-4 py-2 rounded-lg transition-colors inline-flex items-center gap-2 ${
+                      className={`px-4 py-2.5 rounded-xl transition-all inline-flex items-center gap-2 font-medium border ${
                         batchMode
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'text-gray-700 hover:bg-gray-100'
+                          ? 'bg-blue-100 text-blue-700 border-blue-300'
+                          : 'text-gray-700 hover:bg-gray-100 border-gray-300'
                       }`}
                     >
                       <CheckSquare className="w-4 h-4" />
-                      <span className="hidden sm:inline">Batch Select</span>
+                      <span className="hidden sm:inline">Batch</span>
                     </button>
                     <button
                       onClick={handleRefresh}
-                      className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors inline-flex items-center gap-2"
+                      className="px-4 py-2.5 text-gray-700 hover:bg-gray-100 rounded-xl transition-all inline-flex items-center gap-2 border border-gray-300 font-medium"
                     >
                       <RefreshCw className="w-4 h-4" />
                       <span className="hidden sm:inline">Refresh</span>
                     </button>
                     <button
                       onClick={handleAddFromTemplate}
-                      className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors inline-flex items-center gap-2"
+                      className="px-4 py-2.5 text-gray-700 hover:bg-gray-100 rounded-xl transition-all inline-flex items-center gap-2 border border-gray-300 font-medium"
                     >
                       <Layers className="w-4 h-4" />
-                      <span className="hidden sm:inline">From Template</span>
+                      <span className="hidden sm:inline">Template</span>
                     </button>
                     <button
                       onClick={handleAddProperty}
                       disabled={stats.listingCredits <= 0}
-                      className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl font-semibold inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg"
                     >
                       <Plus className="w-5 h-5" />
-                      Add Listing
+                      <span>Add Listing</span>
                     </button>
                   </>
                 )}
@@ -583,67 +589,70 @@ export function AgentDashboard() {
 
         <div className="grid grid-cols-12 gap-6 p-6">
           {/* Sidebar */}
-          <div className="col-span-12 lg:col-span-3 space-y-6">
+          <div className="col-span-12 lg:col-span-3 space-y-5">
             {/* Stats Cards */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wider">Overview</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+              <h3 className="text-xs font-bold text-gray-500 mb-5 uppercase tracking-wider flex items-center gap-2">
+                <div className="w-1 h-4 bg-blue-600 rounded-full"></div>
+                Overview
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-xl hover:bg-green-50 transition-colors group">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                      <CheckCircle className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Active</p>
-                      <p className="text-lg font-bold text-gray-900">{stats.activeListings}</p>
+                      <p className="text-xs font-medium text-gray-500">Active</p>
+                      <p className="text-xl font-bold text-gray-900">{stats.activeListings}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 rounded-xl hover:bg-yellow-50 transition-colors group">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center">
-                      <Clock className="w-5 h-5 text-yellow-600" />
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                      <Clock className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Pending</p>
-                      <p className="text-lg font-bold text-gray-900">{stats.pendingListings}</p>
+                      <p className="text-xs font-medium text-gray-500">Pending</p>
+                      <p className="text-xl font-bold text-gray-900">{stats.pendingListings}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors group">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center">
-                      <EyeOff className="w-5 h-5 text-gray-600" />
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                      <EyeOff className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Inactive</p>
-                      <p className="text-lg font-bold text-gray-900">{stats.inactiveListings}</p>
+                      <p className="text-xs font-medium text-gray-500">Inactive</p>
+                      <p className="text-xl font-bold text-gray-900">{stats.inactiveListings}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 rounded-xl hover:bg-orange-50 transition-colors group">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
-                      <Star className="w-5 h-5 text-orange-600" />
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                      <Star className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Featured</p>
-                      <p className="text-lg font-bold text-gray-900">{stats.featuredCount}</p>
+                      <p className="text-xs font-medium text-gray-500">Featured</p>
+                      <p className="text-xl font-bold text-gray-900">{stats.featuredCount}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 mt-4 border border-blue-200">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                      <Eye className="w-5 h-5 text-blue-600" />
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
+                      <Eye className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Total Views</p>
-                      <p className="text-lg font-bold text-gray-900">{stats.totalViews.toLocaleString()}</p>
+                      <p className="text-xs font-semibold text-blue-700">Total Views</p>
+                      <p className="text-xl font-bold text-blue-900">{stats.totalViews.toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -651,39 +660,49 @@ export function AgentDashboard() {
             </div>
 
             {/* Credits */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wider">Credits</h3>
-              <div className="space-y-3">
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-sm text-blue-700 font-medium">Listing Credits</p>
-                    <Package className="w-4 h-4 text-blue-600" />
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+              <h3 className="text-xs font-bold text-gray-500 mb-5 uppercase tracking-wider flex items-center gap-2">
+                <div className="w-1 h-4 bg-blue-600 rounded-full"></div>
+                Credits
+              </h3>
+              <div className="space-y-4">
+                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-blue-100 font-semibold">Listing Credits</p>
+                    <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                      <Package className="w-4 h-4 text-white" />
+                    </div>
                   </div>
-                  <p className="text-3xl font-bold text-blue-900">{stats.listingCredits}</p>
-                  <p className="text-xs text-blue-600 mt-1">Available for new listings</p>
+                  <p className="text-4xl font-bold text-white mb-1">{stats.listingCredits}</p>
+                  <p className="text-xs text-blue-100">Available for new listings</p>
                 </div>
 
-                <div className="bg-gradient-to-br from-orange-50 to-yellow-100 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-sm text-orange-700 font-medium">Boost Credits</p>
-                    <Zap className="w-4 h-4 text-orange-600" />
+                <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-orange-100 font-semibold">Boost Credits</p>
+                    <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                      <Zap className="w-4 h-4 text-white" />
+                    </div>
                   </div>
-                  <p className="text-3xl font-bold text-orange-900">{stats.boostingCredits}</p>
-                  <p className="text-xs text-orange-600 mt-1">Feature your properties</p>
+                  <p className="text-4xl font-bold text-white mb-1">{stats.boostingCredits}</p>
+                  <p className="text-xs text-orange-100">Feature your properties</p>
                 </div>
               </div>
             </div>
 
             {/* Filters */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wider">Filters</h3>
-              <div className="space-y-3">
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+              <h3 className="text-xs font-bold text-gray-500 mb-5 uppercase tracking-wider flex items-center gap-2">
+                <div className="w-1 h-4 bg-blue-600 rounded-full"></div>
+                Filters
+              </h3>
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-2">Status</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-2.5 uppercase tracking-wide">Status</label>
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300 bg-gray-50"
                   >
                     <option value="all">All Status</option>
                     <option value="active">Active</option>
@@ -693,11 +712,11 @@ export function AgentDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-2">Sort By</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-2.5 uppercase tracking-wide">Sort By</label>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300 bg-gray-50"
                   >
                     <option value="newest">Newest First</option>
                     <option value="oldest">Oldest First</option>
@@ -713,12 +732,12 @@ export function AgentDashboard() {
           {/* Main Content */}
           <div className="col-span-12 lg:col-span-9">
             {/* Search Bar */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-6 shadow-sm">
               <div className="flex items-center gap-3">
                 {batchMode && (
                   <button
                     onClick={selectAllProperties}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2.5 hover:bg-blue-50 rounded-xl transition-all border border-gray-200"
                   >
                     {selectedProperties.size === filteredProperties.length ? (
                       <CheckSquare className="w-5 h-5 text-blue-600" />
@@ -728,13 +747,13 @@ export function AgentDashboard() {
                   </button>
                 )}
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search by title, location, or property type..."
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium text-gray-900 placeholder-gray-400 bg-gray-50"
                   />
                 </div>
               </div>
@@ -742,11 +761,11 @@ export function AgentDashboard() {
 
             {/* Properties Grid */}
             {filteredProperties.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-16 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Building2 className="w-8 h-8 text-gray-400" />
+              <div className="bg-white rounded-2xl border-2 border-dashed border-gray-300 p-20 text-center shadow-sm">
+                <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-inner">
+                  <Building2 className="w-10 h-10 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
                   {properties.length === 0 ? 'No properties yet' : 'No properties found'}
                 </h3>
                 <p className="text-gray-500 mb-6">
@@ -766,38 +785,40 @@ export function AgentDashboard() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filteredProperties.map((property) => (
                   <div
                     key={property.id}
                     onClick={() => !batchMode && handleEditProperty(property)}
-                    className={`bg-white rounded-xl border-2 overflow-hidden hover:shadow-lg transition-all cursor-pointer group ${
-                      selectedProperties.has(property.id) ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200 hover:border-blue-300'
+                    className={`bg-white rounded-2xl border-2 overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer group ${
+                      selectedProperties.has(property.id) ? 'border-blue-500 ring-4 ring-blue-200 shadow-xl' : 'border-gray-200 hover:border-blue-400 shadow-sm hover:-translate-y-1'
                     }`}
                   >
                     {/* Image */}
-                    <div className="relative h-52 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+                    <div className="relative h-56 bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300 overflow-hidden">
                       {property.main_image_url ? (
                         <img
                           src={property.main_image_url}
                           alt={property.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Building2 className="w-12 h-12 text-gray-400" />
+                          <div className="w-16 h-16 rounded-2xl bg-white/80 flex items-center justify-center">
+                            <Building2 className="w-10 h-10 text-gray-400" />
+                          </div>
                         </div>
                       )}
 
                       {/* Batch Select Checkbox */}
                       {batchMode && (
-                        <div className="absolute top-3 left-3">
+                        <div className="absolute top-4 left-4">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               togglePropertySelection(property.id);
                             }}
-                            className="w-8 h-8 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
+                            className="w-9 h-9 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg flex items-center justify-center hover:bg-white transition-all border-2 border-gray-200"
                           >
                             {selectedProperties.has(property.id) ? (
                               <CheckSquare className="w-5 h-5 text-blue-600" />
@@ -809,19 +830,19 @@ export function AgentDashboard() {
                       )}
 
                       {/* Status Badge */}
-                      <div className={`absolute ${batchMode ? 'top-3 right-3' : 'top-3 left-3'}`}>
+                      <div className={`absolute ${batchMode ? 'top-4 right-4' : 'top-4 left-4'}`}>
                         {property.status === 'active' && (
-                          <span className="px-2.5 py-1 bg-green-500 text-white text-xs font-semibold rounded-md">
+                          <span className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-bold rounded-full shadow-lg backdrop-blur-sm">
                             Active
                           </span>
                         )}
                         {property.status === 'pending' && (
-                          <span className="px-2.5 py-1 bg-yellow-500 text-white text-xs font-semibold rounded-md">
+                          <span className="px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-xs font-bold rounded-full shadow-lg backdrop-blur-sm">
                             Pending
                           </span>
                         )}
                         {property.status === 'inactive' && (
-                          <span className="px-2.5 py-1 bg-gray-500 text-white text-xs font-semibold rounded-md">
+                          <span className="px-3 py-1.5 bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs font-bold rounded-full shadow-lg backdrop-blur-sm">
                             Inactive
                           </span>
                         )}
@@ -829,9 +850,9 @@ export function AgentDashboard() {
 
                       {/* Featured Badge */}
                       {property.is_featured && !batchMode && (
-                        <div className="absolute top-3 right-3">
-                          <span className="px-2.5 py-1 bg-orange-500 text-white text-xs font-semibold rounded-md flex items-center gap-1">
-                            <Star className="w-3 h-3 fill-current" />
+                        <div className="absolute top-4 right-4">
+                          <span className="px-3 py-1.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs font-bold rounded-full shadow-lg backdrop-blur-sm flex items-center gap-1.5">
+                            <Star className="w-3.5 h-3.5 fill-current" />
                             Featured
                           </span>
                         </div>
@@ -840,53 +861,53 @@ export function AgentDashboard() {
                     </div>
 
                     {/* Content */}
-                    <div className="p-4">
+                    <div className="p-5">
                       {/* Price - Top Priority */}
-                      <div className="mb-3">
+                      <div className="mb-4">
                         <p className="text-2xl font-bold text-gray-900">
                           RM {property.price.toLocaleString()}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-600 font-medium">
                           RM {(property.price / property.sqft).toFixed(0)}/sqft
                         </p>
                       </div>
 
                       {/* Title */}
-                      <h3 className="text-base font-semibold text-gray-900 mb-2 line-clamp-2">
+                      <h3 className="text-base font-bold text-gray-900 mb-3 line-clamp-2 leading-snug">
                         {property.title}
                       </h3>
 
                       {/* Location */}
-                      <div className="flex items-center text-sm text-gray-600 mb-3">
-                        <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-                        <span className="line-clamp-1">{property.city}, {property.state}</span>
+                      <div className="flex items-center text-sm text-gray-600 mb-4">
+                        <MapPin className="w-4 h-4 mr-1.5 flex-shrink-0 text-blue-600" />
+                        <span className="line-clamp-1 font-medium">{property.city}, {property.state}</span>
                       </div>
 
                       {/* Property Details */}
-                      <div className="flex items-center gap-4 text-sm text-gray-600 pb-3 border-b border-gray-100">
-                        <div className="flex items-center gap-1">
-                          <Bed className="w-4 h-4" />
-                          <span>{property.bedrooms}</span>
+                      <div className="flex items-center gap-5 text-sm text-gray-700 pb-4 border-b-2 border-gray-100">
+                        <div className="flex items-center gap-1.5">
+                          <Bed className="w-4 h-4 text-gray-500" />
+                          <span className="font-semibold">{property.bedrooms}</span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Bath className="w-4 h-4" />
-                          <span>{property.bathrooms}</span>
+                        <div className="flex items-center gap-1.5">
+                          <Bath className="w-4 h-4 text-gray-500" />
+                          <span className="font-semibold">{property.bathrooms}</span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Square className="w-4 h-4" />
-                          <span>{property.sqft.toLocaleString()}</span>
+                        <div className="flex items-center gap-1.5">
+                          <Square className="w-4 h-4 text-gray-500" />
+                          <span className="font-semibold">{property.sqft.toLocaleString()}</span>
                         </div>
                       </div>
 
                       {/* Stats Row */}
-                      <div className="flex items-center justify-between pt-3">
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          <span className="px-2 py-1 bg-gray-100 rounded">{property.property_type}</span>
-                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">{property.listing_type}</span>
+                      <div className="flex items-center justify-between pt-4">
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="px-2.5 py-1.5 bg-gray-100 text-gray-700 rounded-lg font-bold">{property.property_type}</span>
+                          <span className="px-2.5 py-1.5 bg-blue-100 text-blue-700 rounded-lg font-bold">{property.listing_type}</span>
                         </div>
-                        <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
                           <Eye className="w-4 h-4" />
-                          <span>{property.views_count || 0}</span>
+                          <span className="font-semibold">{property.views_count || 0}</span>
                         </div>
                       </div>
                     </div>
