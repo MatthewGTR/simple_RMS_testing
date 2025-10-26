@@ -4,12 +4,15 @@ import { PublicLanding } from './components/PublicLanding'
 import { PropertyBrowser } from './components/PropertyBrowser'
 import { UnifiedAuth } from './components/UnifiedAuth'
 import { Navigation } from './components/Navigation'
+import { Dashboard } from './components/Dashboard'
 import { AgentDashboard } from './components/AgentDashboard'
 import { AdminDashboard } from './components/AdminDashboard'
+import { EnhancedAdminPanel } from './components/EnhancedAdminPanel'
+import { PropertyManagement } from './components/PropertyManagement'
 import { ConsumerDashboard } from './components/ConsumerDashboard'
 import { NotificationContainer } from './components/Notification'
 
-type View = 'dashboard' | 'public-home' | 'browse-buy' | 'browse-rent'
+type View = 'dashboard' | 'admin-dashboard' | 'enhanced-admin' | 'properties' | 'public-home' | 'browse-buy' | 'browse-rent'
 
 function AppContent() {
   const { user, profile, loading, signOut } = useAuth()
@@ -77,13 +80,19 @@ function AppContent() {
     <div className="min-h-screen bg-gray-50">
       <Navigation activeView={view} onViewChange={setView} />
 
-      <main>
+      <main className={view.startsWith('public') || view.startsWith('browse') ? '' : 'py-8 px-4 sm:px-6 lg:px-8'}>
         {view === 'dashboard' ? (
           <>
-            {isAdmin && <AdminDashboard onNavigate={setView} />}
+            {isAdmin && <Dashboard />}
             {isAgent && !isAdmin && <AgentDashboard />}
             {isConsumer && !isAdmin && !isAgent && <ConsumerDashboard />}
           </>
+        ) : view === 'admin-dashboard' ? (
+          <AdminDashboard onNavigate={setView} />
+        ) : view === 'enhanced-admin' ? (
+          <EnhancedAdminPanel />
+        ) : view === 'properties' ? (
+          <PropertyManagement />
         ) : view === 'public-home' ? (
           <PublicLanding
             onShowAuth={() => {}}
@@ -93,7 +102,7 @@ function AppContent() {
             }}
             user={user}
             profile={profile}
-            onGoToPortal={() => setView('dashboard')}
+            onGoToPortal={() => setView(isAdmin ? 'admin-dashboard' : 'dashboard')}
             onSignOut={signOut}
           />
         ) : view === 'browse-buy' ? (
